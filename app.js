@@ -41,14 +41,22 @@
     say(text) {
       if (!this.ok) return;
       try {
-        speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
+        // A lone short word gets its last sound clipped ("sheep" heard as "she"), most of all when it is
+        // spoken right after a cancel. So: cancel only when something is playing, wait a beat, and end the
+        // word with a full stop so the voice finishes it the way it finishes a sentence.
+        const busy = speechSynthesis.speaking || speechSynthesis.pending;
+        if (busy) speechSynthesis.cancel();
+        clearTimeout(this.timer);
+        const u = new SpeechSynthesisUtterance(/[a-z]$/i.test(text) ? `${text}.` : text);
         u.lang = 'en-US';
-        u.rate = 0.8;
+        u.rate = 0.9;
         const vs = speechSynthesis.getVoices();
-        const v = vs.find((x) => /^en[-_]US/i.test(x.lang)) || vs.find((x) => /^en/i.test(x.lang));
+        const v = vs.find((x) => /^en[-_]US/i.test(x.lang) && x.localService !== false)
+          || vs.find((x) => /^en[-_]US/i.test(x.lang)) || vs.find((x) => /^en/i.test(x.lang));
         if (v) u.voice = v;
-        speechSynthesis.speak(u);
+        this.last = u; // Safari drops an utterance that is garbage-collected mid-word
+        if (busy) this.timer = setTimeout(() => speechSynthesis.speak(u), 120);
+        else speechSynthesis.speak(u);
       } catch (e) { /* the word stays on screen */ }
     },
     check() { // for the parent screen (M2): is there an English voice on this iPad?
@@ -89,6 +97,13 @@
   };
 
   // ---------- small helpers ----------
+  const lastPick = {};
+  function pick(key, list) { // a random line, never the one used last time
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === lastPick[key]) i = (i + 1) % list.length;
+    lastPick[key] = i;
+    return list[i];
+  }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const en = (s) => `<bdi class="en" lang="en" dir="ltr">${esc(s)}</bdi>`;
   let keyHandler = null;
@@ -118,7 +133,8 @@
     on('[data-k]', (e) => { Sfx.tap(); handler(e.currentTarget.dataset.k); });
   }
   function jerseyHtml(name, number, size = '') {
-    return `<div class="jersey ${size}"><div class="jersey-body"><span class="jersey-name" dir="ltr">${esc(name)}</span><span class="jersey-num">${esc(number)}</span></div></div>`;
+    const nm = name ? `<b class="cap">${esc(name[0])}</b>${esc(name.slice(1))}` : '&nbsp;';
+    return `<div class="jersey ${size}"><div class="jersey-body"><span class="jersey-name" dir="ltr">${nm}</span><span class="jersey-num">${esc(number)}</span></div></div>`;
   }
 
   // ---------- first run: jersey, number, idol ----------
@@ -128,21 +144,30 @@
     screen(`<section class="setup">
       <p class="kicker">חדר ההלבשה</p>
       <h1>החולצה מחכה לשם שלך</h1>
-      <p class="lead">מקלידים את השם באנגלית, אות אחרי אות.</p>
+      <p class="lead">מקלידים את השם באנגלית, אות אחרי אות. שם מתחיל תמיד ב<b class="gold">אות גדולה</b>.</p>
       <div id="jz"></div>
+      <div class="namebox" id="nb" dir="ltr"></div>
       <p class="note" id="note">${wrongShown ? `איש הציוד בדק: על החולצה הרשמית כתוב ${en(target.split('').join('-'))}` : ''}</p>
       ${keyboardHtml('מדפיסים על החולצה')}
     </section>`, 'scr-setup');
-    const paint = () => { document.getElementById('jz').innerHTML = jerseyHtml(buf.toUpperCase() || '_____', '?', 'big'); };
+    const paint = () => {
+      document.getElementById('jz').innerHTML = jerseyHtml(buf, '?');
+      document.getElementById('nb').innerHTML = `${buf ? `<b class="cap">${buf[0]}</b>${buf.slice(1)}` : ''}<i class="caret"></i>`;
+      // the keys show capitals for the first letter, as the iPad does at the start of a name
+      $app.querySelectorAll('.kb .key[data-k]').forEach((el) => {
+        if (el.dataset.k.length === 1) el.textContent = buf ? el.dataset.k : el.dataset.k.toUpperCase();
+      });
+      $app.querySelector('.kb').classList.toggle('caps', !buf);
+    };
     paint();
     bindKeys((k) => {
       if (k === 'DEL') buf = buf.slice(0, -1);
       else if (k === 'ENTER') {
         if (!buf) return;
-        if (buf.toUpperCase() === target) { Sfx.up(); Voice.say('Eitan'); return setupNumber(); }
+        if (buf === target) { Sfx.up(); Voice.say('Eitan'); return setupNumber(); }
         Sfx.slip();
         return setupName(true);
-      } else if (/^[a-z]$/.test(k) && buf.length < 8) buf += k;
+      } else if (/^[a-z]$/.test(k) && buf.length < 8) buf += buf ? k : k.toUpperCase();
       paint();
     });
   }
@@ -227,13 +252,13 @@
     screen(`<section class="career">
       <header class="board">
         <div class="board-cell"><span>נקודות</span><b>${state.points}</b></div>
-        <div class="board-title"><b>הקריירה של ${en('EITAN')}</b><span>${C.stages[st].name}</span></div>
+        <div class="board-title"><b>הקריירה של ${en(C.playerName)}</b><span>${C.stages[st].name}</span></div>
         <div class="board-cell"><span>ימי משחק</span><b>${matchesPlayed()}</b></div>
       </header>
 
       <div class="hero">
         <div class="me">
-          ${jerseyHtml(p.name, p.number)}
+          ${jerseyHtml(C.playerName, p.number)}
           <p class="captain"><span class="armband">C</span> הקפטן: ${en(p.idol)}</p>
         </div>
         <div class="match">${match}</div>
@@ -337,13 +362,15 @@
     fb.className = `fb ${correct ? 'fb-goal' : 'fb-slip'}`;
     if (correct) {
       (moved ? Sfx.up : Sfx.goal)(s.combo);
-      fb.innerHTML = `<div class="fb-in"><strong>גול!</strong><span>המילה ${en(word)} נפלה. <b class="plus">+${gained}</b></span>
+      const head = C.cheers.combo[s.combo] || pick(item.type, C.cheers.head[item.type]);
+      const sub = pick('sub', C.cheers.sub).replace('{w}', en(word));
+      fb.innerHTML = `<div class="fb-in"><strong>${head}</strong><span>${sub} <b class="plus">+${gained}</b></span>
         ${moved ? `<span class="climb">${en(word)} מטפסת: ${C.levels[res.to]}</span>` : ''}</div>`;
       setTimeout(() => { if (fb.isConnected) next(); }, moved ? 1500 : 1000);
       fb.addEventListener('click', next, { once: true });
     } else {
       Sfx.slip();
-      fb.innerHTML = `<div class="fb-in"><strong>${en(word)} חמקה!</strong>${missHtml}
+      fb.innerHTML = `<div class="fb-in"><strong>${pick('slip', C.cheers.slip).replace('{w}', en(word))}</strong>${missHtml}
         ${moved ? `<span class="climb">${en(word)} מחליקה שלב אחד אחורה.</span>` : ''}
         <button class="btn btn-go" id="fbnext">ממשיכים</button></div>`;
       fb.querySelector('#fbnext').addEventListener('click', next, { once: true });
