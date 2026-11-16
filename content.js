@@ -33,8 +33,8 @@ window.CONTENT = {
   // sh words from the teacher's list, heard only (never shown before the answer), so the Whistle is a real choice on day 1.
   foils: ['sheep', 'shop', 'shirt', 'shoes', 'fish', 'brush', 'wash', 'short'],
 
-  /* The 2026/27 first-team numbers as announced by the club (found via web search on 16 Nov 2026).
-     Names as text only. The owner confirms this list before publishing (prd.md §11.3). */
+  /* The official 2026/27 squad as listed on LALIGA's club page (laliga.com/en-GB/clubs/fc-barcelona/squad),
+     from the owner's printout of 16 Nov 2026. Names as text only. */
   idols: [
     { name: 'Joan García', number: 1 },
     { name: 'João Cancelo', number: 2 },
@@ -50,14 +50,25 @@ window.CONTENT = {
     { name: 'Xavi Espart', number: 12 },
     { name: 'Wojciech Szczęsny', number: 13 },
     { name: 'Karim Adeyemi', number: 14 },
+    { name: 'Andreas Christensen', number: 15 },
     { name: 'Rodrigo', number: 16 },
     { name: 'Anthony Gordon', number: 17 },
+    { name: 'Gerard Martín', number: 18 },
     { name: 'Roony Bardghji', number: 19 },
     { name: 'Dani Olmo', number: 20 },
     { name: 'Frenkie de Jong', number: 21 },
     { name: 'Marc Bernal', number: 22 },
+    { name: 'Jules Koundé', number: 23 },
+    { name: 'Eric García', number: 24 },
     { name: 'Dominik Livaković', number: 25 },
-    { name: 'Jesse Bisiwu', number: 27 },
+    { name: 'Cortés', number: 26 },
     { name: 'Hamza Abdelkarim', number: 29 },
+    { name: 'Ebrima Tunkara', number: 30 },
+    { name: 'Eder Aller', number: 31 },
+    { name: 'Orian Goren', number: 32 },
+    { name: 'Jordi Pesquer', number: 33 },
+    { name: 'Iker Rodríguez', number: 35 },
+    { name: 'Guillem Víctor', number: 40 },
+    { name: 'Álex Campos', number: 41 },
   ],
 };
