@@ -19,6 +19,8 @@ This is a sibling of Gilad's game (`yaircahen/english-practice-nov26`). Same fam
 
 ## Running and testing
 - Preview: `python3 -m http.server 8765 --bind 127.0.0.1`, then open `http://localhost:8765/`.
+- Engine tests: `node --test tests/engine.test.js`. Play-through (needs the preview server): `node tests/e2e.js`.
+- `?day=2026-11-17` opens the game as if it were that day; `?reset` wipes the save.
 - **Stale-cache trap:** `index.html` stamps the JS and CSS with `?v=`. After an edit, bump the stamp or Safari may serve old files.
 - Speech uses `speechSynthesis` and needs a tap first on iOS. Stub it in tests.
 - Progress is tied to the page's origin. A new address means a fresh save.
