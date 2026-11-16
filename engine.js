@@ -1,0 +1,150 @@
+/* Leitner engine (prd.md §6.1). Pure logic, no DOM: loads in the browser and in Node tests.
+   Days are local ISO dates ("2026-11-16"), so string comparison orders them. */
+(function (root) {
+  'use strict';
+
+  const TRICKY_AFTER = 4;      // misses before a word becomes "tricky"
+  const MAX_TURNS_PER_WORD = 9; // fast-track turns for one word in one sitting
+  const BATCH = 4;             // new words introduced together
+
+  function newCard() {
+    return {
+      level: 1, seen: false,
+      streak: 0, streakDrills: [], streakDay: null,
+      l3Day: null, l4Day: null, lastPromoDay: null,
+      misses: 0, tricky: false,
+    };
+  }
+
+  /* One answer on one card. Mutates the card and returns what happened.
+     retry = the end-of-sitting repeat of a missed word: it never moves a box. */
+  function answer(card, { drill, correct, today, retry }) {
+    const from = card.level;
+    let becameTricky = false;
+    card.seen = true;
+
+    if (!correct) {
+      card.misses += 1;
+      if (card.misses >= TRICKY_AFTER && !card.tricky) { card.tricky = true; becameTricky = true; }
+      card.streak = 0;
+      card.streakDrills = [];
+      if (!retry) {
+        if (card.level === 2) card.level = 1;
+        else if (card.level === 4) { card.level = 3; card.l3Day = today; }
+        else if (card.level === 5) { card.level = 4; card.l4Day = today; }
+        // level 3 stays: never below 3 once reached
+      }
+    } else if (!retry) {
+      if (card.level < 3) {
+        // fast track: the streak only counts inside one sitting (one day)
+        if (card.streakDay !== today) { card.streak = 0; card.streakDrills = []; }
+        card.streakDay = today;
+        card.streak += 1;
+        if (!card.streakDrills.includes(drill)) card.streakDrills.push(drill);
+        if (card.level === 1) card.level = 2;
+        else if (card.streak >= 3 && card.streakDrills.length >= 2) {
+          card.level = 3; card.l3Day = today; card.lastPromoDay = today;
+        }
+      } else if (card.level === 3 && today > card.l3Day) {
+        card.level = 4; card.l4Day = today; card.lastPromoDay = today;
+      } else if (card.level === 4 && today > card.l4Day) {
+        card.level = 5; card.lastPromoDay = today;
+      }
+    }
+    return { from, to: card.level, correct, becameTricky };
+  }
+
+  function shuffle(list, rng) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function canWhistle(word, speech) {
+    return !!(speech && word.blend && !word.silent);
+  }
+
+  /* Seen words worth a turn today, highest level first, shuffled inside a level. */
+  function dueWords(words, cards, today, rng) {
+    const due = words.filter((w) => {
+      const c = cards[w.id];
+      if (!c || !c.seen) return false;
+      if (c.level === 5) return rng() < 0.25;          // spot check
+      if (c.level === 4) return today > c.l4Day;       // the lock
+      if (c.level === 3) return today > c.l3Day;
+      return true;
+    });
+    const out = [];
+    for (let lv = 5; lv >= 1; lv--) {
+      out.push(...shuffle(due.filter((w) => cards[w.id].level === lv), rng));
+    }
+    return out;
+  }
+
+  /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out. */
+  function buildSession({ words, foils = [], cards, today, dayNum, speech, rng = Math.random }) {
+    const q = [];
+    for (const w of dueWords(words, cards, today, rng)) {
+      q.push({ type: cards[w.id].level >= 3 ? 'spell' : 'recognise', wordId: w.id, phase: 'warmup' });
+    }
+
+    const fresh = words.filter((w) => !(cards[w.id] && cards[w.id].seen) && w.day <= dayNum);
+    if (!fresh.length) return q;
+
+    const foilPool = speech ? shuffle(foils, rng) : [];
+    for (let i = 0; i < fresh.length; i += BATCH) {
+      const batch = fresh.slice(i, i + BATCH);
+      for (const w of batch) q.push({ type: 'intro', wordId: w.id, phase: 'first' });
+      for (const w of shuffle(batch, rng)) q.push({ type: 'recognise', wordId: w.id, phase: 'first' });
+      const second = batch.map((w) => ({
+        type: canWhistle(w, speech) ? 'whistle' : 'missing', wordId: w.id, phase: 'first',
+      }));
+      // sh words by ear only, so the whistle is a real choice. They carry no card.
+      for (const f of foilPool.splice(0, Math.round(batch.length / 2))) {
+        second.push({ type: 'whistle', foil: f, phase: 'first' });
+      }
+      q.push(...shuffle(second, rng));
+    }
+
+    q.push({ type: 'halftime' });
+    for (const w of shuffle(fresh, rng)) q.push({ type: 'missing', wordId: w.id, phase: 'second' });
+    q.push({ type: 'shootout' });
+    for (const w of shuffle(fresh, rng)) q.push({ type: 'spell', wordId: w.id, phase: 'shootout' });
+    return q;
+  }
+
+  function nextDrill(card, word, lastType, speech) {
+    if (card.level === 1) return 'recognise';
+    const cands = ['missing', 'whistle', 'recognise'].filter((d) => d !== 'whistle' || canWhistle(word, speech));
+    return cands.find((d) => d !== lastType && !card.streakDrills.includes(d))
+      || cands.find((d) => d !== lastType)
+      || cands[0];
+  }
+
+  /* After an answer: keep a fast-track word coming until it is in the squad,
+     and bring a missed squad word back once at the very end (no box change). */
+  function followUps(queue, pos, item, card, res, { words, speech }) {
+    if (!item.wordId || item.retry || item.type === 'intro') return;
+    const id = item.wordId;
+    if (card.level < 3) {
+      if (item.phase === 'shootout') return;
+      let lim = queue.findIndex((x, k) => k > pos && x.type === 'shootout');
+      if (lim < 0) lim = queue.length;
+      const pending = queue.slice(pos + 1, lim).some((x) => x.wordId === id && x.type !== 'intro');
+      const turns = queue.filter((x) => x.wordId === id && x.type !== 'intro').length;
+      if (!pending && turns < MAX_TURNS_PER_WORD) {
+        const word = words.find((w) => w.id === id);
+        queue.splice(lim, 0, { type: nextDrill(card, word, item.type, speech), wordId: id, phase: 'extra' });
+      }
+    } else if (!res.correct && res.from >= 3) {
+      queue.push({ type: item.type, wordId: id, retry: true, phase: 'retry' });
+    }
+  }
+
+  const Engine = { newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, shuffle };
+  if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
+  else root.Engine = Engine;
+})(typeof window !== 'undefined' ? window : globalThis);

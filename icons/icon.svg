@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a1a3f"/>
+  <g>
+    <rect x="0" width="103" height="512" fill="#004d98"/>
+    <rect x="103" width="102" height="512" fill="#a50044"/>
+    <rect x="205" width="102" height="512" fill="#004d98"/>
+    <rect x="307" width="102" height="512" fill="#a50044"/>
+    <rect x="409" width="103" height="512" fill="#004d98"/>
+  </g>
+  <polygon points="0,330 512,250 512,512 0,512" fill="#0a1a3f"/>
+  <polygon points="0,330 512,250 512,268 0,348" fill="#edbb00"/>
+  <text x="256" y="236" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="210" fill="#edbb00" stroke="#0a1a3f" stroke-width="10" paint-order="stroke">E</text>
+  <text x="256" y="462" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="120" fill="#ffffff">ABC</text>
+</svg>
