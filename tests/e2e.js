@@ -26,7 +26,7 @@ const shots = process.argv[2];
 
   // setup: a wrong name first, then the right one
   await type('eitam'); await page.click('[data-k="ENTER"]');
-  assert.match(await page.textContent('#note'), /E-I-T-A-N/);
+  assert.match(await page.textContent('#note'), /E-i-t-a-n/);
   await type('eitan'); await shot('01-name'); await page.click('[data-k="ENTER"]');
   await type('10'); await shot('02-number'); await page.click('[data-k="ENTER"]');
   await shot('03-idol');
@@ -49,7 +49,7 @@ const shots = process.argv[2];
     }
     if (await page.$('.opt.blend')) {
       if (!seen.has('wh')) { seen.add('wh'); await shot('07-whistle'); }
-      const said = await page.evaluate(() => window.__said[window.__said.length - 1]);
+      const said = (await page.evaluate(() => window.__said[window.__said.length - 1])).replace(/\.$/, '');
       await page.click(`.opt[data-b="${words.some((w) => w.en === said) ? 'ch' : 'sh'}"]`);
     } else if (await page.$('.opt')) {
       if (!seen.has('rec')) { seen.add('rec'); await shot('06-recognise'); }
