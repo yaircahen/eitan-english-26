@@ -38,8 +38,15 @@
   // ---------- speech and sound ----------
   const Voice = {
     ok: 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined',
+    // Speaks, and resolves when the word has been said (or after 3.5 s: Safari does not always report the end).
     say(text) {
-      if (!this.ok) return;
+      if (!this.ok) return Promise.resolve();
+      return new Promise((done) => {
+        setTimeout(done, 3500);
+        this.speak(text, done);
+      });
+    },
+    speak(text, done) {
       try {
         // A lone short word gets its last sound clipped ("sheep" heard as "she"), most of all when it is
         // spoken right after a cancel. So: cancel only when something is playing, wait a beat, and end the
@@ -54,10 +61,12 @@
         const v = vs.find((x) => /^en[-_]US/i.test(x.lang) && x.localService !== false)
           || vs.find((x) => /^en[-_]US/i.test(x.lang)) || vs.find((x) => /^en/i.test(x.lang));
         if (v) u.voice = v;
+        u.onend = done;
+        u.onerror = done;
         this.last = u; // Safari drops an utterance that is garbage-collected mid-word
         if (busy) this.timer = setTimeout(() => speechSynthesis.speak(u), 120);
         else speechSynthesis.speak(u);
-      } catch (e) { /* the word stays on screen */ }
+      } catch (e) { done(); /* the word stays on screen */ }
     },
     check() { // for the parent screen (M2): is there an English voice on this iPad?
       if (!this.ok) { state.voiceMissing = true; return; }
@@ -356,7 +365,7 @@
     save();
 
     const word = item.wordId ? WORD[item.wordId].en : item.foil;
-    Voice.say(word);
+    const spoken = Voice.say(word);
     const moved = res && res.to !== res.from;
     const fb = document.createElement('div');
     fb.className = `fb ${correct ? 'fb-goal' : 'fb-slip'}`;
@@ -366,7 +375,10 @@
       const sub = pick('sub', C.cheers.sub).replace('{w}', en(word));
       fb.innerHTML = `<div class="fb-in"><strong>${head}</strong><span>${sub} <b class="plus">+${gained}</b></span>
         ${moved ? `<span class="climb">${en(word)} מטפסת: ${C.levels[res.to]}</span>` : ''}</div>`;
-      setTimeout(() => { if (fb.isConnected) next(); }, moved ? 1500 : 1000);
+      // stay until the word has been said and there was time to read the line; a tap skips
+      const big = (moved && res.to >= 3) || !!C.cheers.combo[s.combo]; // joining the squad or a combo milestone
+      const beat = new Promise((ok) => setTimeout(ok, big ? 3000 : 2000));
+      Promise.all([spoken, beat]).then(() => { if (fb.isConnected) next(); });
       fb.addEventListener('click', next, { once: true });
     } else {
       Sfx.slip();
