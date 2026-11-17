@@ -44,13 +44,19 @@ const shots = process.argv[2];
   async function playMatch(miss) {
     let missed = false; const faces = new Set();
     for (let i = 0; i < 900; i++) {
-      await page.waitForSelector('.stage');
+      await page.waitForSelector('.stage, .career');
+      if (await page.$('.career')) return faces;
+      if (await page.$('.pack')) {
+        for (const el of await page.$$('.pcard')) await el.click();
+        await once('pack', '19-pack');
+        await page.click('#packok'); continue;
+      }
       if (await page.$('.fb')) { await page.click('.fb').catch(() => {}); continue; }
       const kicker = (await page.textContent('.kicker')).trim();
       if (await page.$('#ok')) {
         if (/יריבה חדשה/.test(kicker)) await once('intro', '05-intro');
         if (/מחצית/.test(kicker)) await once('half', '08-halftime');
-        if (/שריקת הסיום/.test(kicker)) { await once('full', '11-fulltime'); await page.click('#ok'); return faces; }
+        if (/שריקת הסיום/.test(kicker)) await once('full', '11-fulltime');
         await page.click('#ok'); continue;
       }
       if (await page.$('.opt.blend')) {
@@ -99,6 +105,12 @@ const shots = process.argv[2];
   assert.ok(day1.every((w) => st.cards[w.id].level === 3), 'all 11 in the squad after day 1');
   assert.ok(day2.every((w) => !st.cards[w.id].seen), 'day-2 words stay in the stands on day 1');
   assert.equal(st.cards.chocolate.misses, 1);
+  const owned = Object.keys(st.album).length;
+  assert.ok(owned >= 3 && owned <= 6, 'two packs of three cards on day 1');
+  assert.match(await page.textContent('.table li.mine'), /Barcelona/);
+  await page.click('#album'); await shot('20-album');
+  assert.equal((await page.$$('.agrid .pcard-face:not(.empty)')).length, owned);
+  await page.click('#back');
   assert.ok(st.days['2026-11-16'].done);
   assert.match(await page.textContent('.match'), /שוחק/);
   assert.equal(await page.$('#go'), null, 'one match a day');

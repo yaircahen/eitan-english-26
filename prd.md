@@ -253,11 +253,11 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 
 ## 11. Open questions
 
-1. Is there audio in the real test (exercise 1)? Which accent?
+1. ~~Is there audio in the real test?~~ Answered by the teacher's letter of 16 Nov: she says the word aloud and the children write the blend.
 2. Which colours appear in exercise 3, and which foods map to them?
 3. The current Barcelona first-team list. To be taken from a public source at build time and confirmed by the owner. Not guessed.
-4. Which fictional clubs for the table? Any real-club names the owner wants to avoid?
-5. Parent PIN: owner to choose.
+4. ~~Which fictional clubs for the table?~~ Decided 17 Nov: a football word every child knows (Maccabi, Hapoel, Beitar, Inter, United, City, FC) plus a test word, and Real Madrid. The list is in `content.js`.
+5. ~~Parent PIN.~~ Decided 17 Nov: as in Gilad's game, chosen on the first open of the coach screen.
 6. Does the owner want the passage reviewed before it goes in?
 
 ## 12. Risks

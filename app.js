@@ -23,7 +23,7 @@
 
   // ---------- save ----------
   function fresh() {
-    return { v: 1, profile: null, cards: {}, session: null, days: {}, points: 0, voiceMissing: false, settings: { coachPin: null, capMin: 15 } };
+    return { v: 1, profile: null, cards: {}, session: null, days: {}, points: 0, voiceMissing: false, album: {}, settings: { coachPin: null, capMin: 15 } };
   }
   const adopt = (raw) => Object.assign(fresh(), raw, { settings: Object.assign(fresh().settings, raw.settings) });
   let state = fresh();
@@ -279,6 +279,11 @@
         ${C.stages.map((x, i) => `<li class="${i < st ? 'past' : i === st ? 'now' : ''}"><i>${i + 1}</i><span>${x.name}</span></li>`).join('')}
       </ol>
 
+      <div class="league">
+        <div class="tablebox"><h2>הטבלה</h2>${tableHtml()}</div>
+        <button class="albumbtn" id="album"><b>האלבום</b><span>${Object.keys(state.album).length} מתוך ${C.idols.length} קלפים</span></button>
+      </div>
+
       <div class="squad">
         <h2>לוח המילים <small>כל מילה מטפסת מימין לשמאל</small></h2>
         <div class="cols">${cols}</div>
@@ -286,6 +291,78 @@
     </section>`, 'scr-career');
 
     on('#go', () => { Sfx.whistle(); Voice.say(' '); startSession(); });
+    on('#album', () => { Sfx.tap(); album(); });
+  }
+
+  // ---------- the table: every answer of his is a minute of league football for the other clubs too ----------
+  function answersGiven() {
+    return Object.values(state.days).reduce((n, d) => n + (d.total || 0), 0) + (state.session ? state.session.total : 0);
+  }
+  function tableHtml() {
+    const n = answersGiven();
+    const rows = C.clubs.map((c) => ({ name: c.name, pts: c.rate * n }))
+      .concat([{ name: C.myClub, pts: state.points, me: true }])
+      .sort((a, b) => b.pts - a.pts || (a.me ? 1 : -1));
+    return `<ol class="table" dir="ltr">${rows.map((r, i) => `<li class="${r.me ? 'mine' : ''}"><i>${i + 1}</i><span>${esc(r.name)}</span><b>${r.pts}</b></li>`).join('')}</ol>`;
+  }
+
+  // ---------- packs and the album ----------
+  const TIERS = ['', 'common', 'silver', 'gold'];
+  const TIER_HE = ['', 'כחול', 'כסף', 'זהב'];
+  const DUP_POINTS = [0, 30, 60, 120];
+  /* Three cards. The tier belongs to the card pulled, not to the player: any player can come in gold.
+     A new player or a higher tier goes into the album; anything else turns into points. */
+  function drawPack() {
+    const pool = C.idols.concat(C.idols.filter((p) => p.name === state.profile.idol)); // the captain: twice as likely
+    const cards = [];
+    while (cards.length < 3) {
+      const p = pool[Math.floor(Math.random() * pool.length)];
+      if (cards.some((c) => c.name === p.name)) continue;
+      const r = Math.random();
+      const tier = r < 0.08 ? 3 : r < 0.35 ? 2 : 1;
+      const had = state.album[p.name] || 0;
+      const card = { name: p.name, number: p.number, tier, isNew: !had, up: had > 0 && tier > had, bonus: 0 };
+      if (tier > had) state.album[p.name] = tier;
+      else { card.bonus = DUP_POINTS[tier]; state.points += card.bonus; }
+      cards.push(card);
+    }
+    save();
+    return cards;
+  }
+  function cardHtml(c, extra = '') {
+    return `<div class="pcard-face t-${TIERS[c.tier]}"><span class="pnum">${c.number}</span><span class="pname" dir="ltr">${esc(c.name)}</span>${extra}</div>`;
+  }
+  function packScreen(cards, kicker, then) {
+    screen(`<section class="play"><div class="stage break pack">
+      <p class="kicker">${kicker}</p>
+      <h1>חבילת קלפים</h1>
+      <div class="pcards">${cards.map((c, i) => `<button class="pcard" data-i="${i}"><div class="pcard-back"><span>?</span></div>${cardHtml(c, `<span class="ptag">${c.isNew ? 'חדש באלבום!' : c.up ? `שדרוג ל${TIER_HE[c.tier]}!` : `כבר באלבום: <b dir="ltr">+${c.bonus}</b> נק׳`}</span>`)}</button>`).join('')}</div>
+      <p class="lead" id="packnote">נוגעים בקלף כדי להפוך אותו.</p>
+      <button class="btn btn-go" id="packok" hidden>ממשיכים</button>
+    </div></section>`, 'scr-play');
+    on('.pcard', (e) => {
+      const el = e.currentTarget;
+      if (el.classList.contains('open')) return;
+      el.classList.add('open');
+      const c = cards[Number(el.dataset.i)];
+      (c.tier === 3 ? Sfx.up : Sfx.goal)(c.tier * 3);
+      if (!$app.querySelector('.pcard:not(.open)')) {
+        document.getElementById('packnote').hidden = true;
+        document.getElementById('packok').hidden = false;
+      }
+    });
+    on('#packok', () => { Sfx.tap(); then(); });
+  }
+  function album() {
+    const own = state.album;
+    screen(`<section class="album">
+      <header><h1>האלבום <small>${Object.keys(own).length} מתוך ${C.idols.length}</small></h1><button class="btn" id="back">חזרה</button></header>
+      <p class="lead">חבילה אחת במחצית ואחת בשריקת הסיום. כל שחקן יכול להגיע בכחול, בכסף או בזהב.</p>
+      <div class="agrid">${C.idols.map((p) => (own[p.name]
+    ? cardHtml({ name: p.name, number: p.number, tier: own[p.name] })
+    : `<div class="pcard-face empty"><span class="pnum">${p.number}</span><span class="pname">?</span></div>`)).join('')}</div>
+    </section>`, 'scr-album');
+    on('#back', career);
   }
 
   // ---------- the match ----------
@@ -579,9 +656,13 @@
       <h1>מחצית</h1>
       <div class="score"><div><b>${s.points}</b><span>נקודות</span></div><div><b>${s.bestCombo}</b><span>הרצף הכי ארוך</span></div></div>
       <p class="lead">המילים שותות מים ומתלחשות. הן מתכננות משהו לחצי השני.</p>
-      <button class="btn btn-go glow" id="ok">חצי שני</button>
+      <button class="btn btn-go glow" id="ok">פותחים חבילה</button>
     </div></section>`, 'scr-play');
-    on('#ok', () => { Sfx.tap(); next(); });
+    on('#ok', () => {
+      Sfx.tap();
+      if (!s.pack) { s.pack = drawPack(); save(); } // drawn once, even if he leaves and comes back
+      packScreen(s.pack, 'חבילת המחצית', next);
+    });
   }
 
   function shootout() {
@@ -606,6 +687,7 @@
     };
     state.session = null;
     save();
+    const pack = drawPack();
     const st = stageIndex();
     Sfx.up();
     screen(`<section class="play"><div class="stage break">
@@ -615,9 +697,9 @@
       ${up.length ? `<div class="chips center">${up.map((id) => `<span class="chip">${WORD[id].emoji} ${en(WORD[id].en)}</span>`).join('')}</div>` : ''}
       ${st > before ? `<p class="lead flag">🚩 שלב חדש בקריירה: ${C.stages[st].name}</p>` : ''}
       <p class="lead">${en(state.profile.idol)} מרים את סרט הקפטן לכבודך. המגרש נפתח שוב מחר.</p>
-      <button class="btn btn-go" id="ok">למסך הקריירה</button>
+      <button class="btn btn-go glow" id="ok">פותחים חבילה</button>
     </div></section>`, 'scr-play');
-    on('#ok', career);
+    on('#ok', () => { Sfx.tap(); packScreen(pack, 'חבילת הסיום', career); });
   }
 
   // ---------- the coach (parent) screen: a 2-second press on the scoreboard title, then a 4-digit code ----------

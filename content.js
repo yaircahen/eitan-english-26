@@ -76,6 +76,20 @@ window.CONTENT = {
     { id: 'cake', en: 'cake', he: 'עוגה', emoji: '🍰', day: 2, line: 'מתוקה מבחוץ, לחוצה מבפנים.', sent: ['We eat ___ at a birthday party.', ['water', 'chair', 'sheep']] },
   ],
 
+  /* The table. Clubs of ours: a football word every child knows, and a word from the test.
+     Real Madrid is the rival of the Clásico. `rate` = points a club makes for every answer he gives. */
+  myClub: 'Barcelona',
+  clubs: [
+    { name: 'Real Madrid', rate: 20 },
+    { name: 'Maccabi Milkshake', rate: 17 },
+    { name: 'Hapoel Chicken', rate: 15 },
+    { name: 'Inter Sandwich', rate: 13 },
+    { name: 'Beitar Cheese', rate: 11 },
+    { name: 'Sheep United', rate: 9 },
+    { name: 'Chips City', rate: 7 },
+    { name: 'FC Spinach', rate: 5 },
+  ],
+
   // sh words heard only, never shown before the answer, so the Whistle is a real choice on day 1 (before the sh words arrive).
   foils: ['sheep', 'shop', 'shirt', 'shoes', 'fish', 'brush', 'wash', 'short'],
 
