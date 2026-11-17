@@ -1,4 +1,4 @@
-/* Eitan's game, M1: setup (jersey, number, idol), career screen, the daily match. */
+/* Eitan's game: setup (jersey, number, idol), career screen, the daily match, the coach (parent) screen. */
 (() => {
   'use strict';
   const C = window.CONTENT;
@@ -23,14 +23,16 @@
 
   // ---------- save ----------
   function fresh() {
-    return { v: 1, profile: null, cards: {}, session: null, days: {}, points: 0, voiceMissing: false };
+    return { v: 1, profile: null, cards: {}, session: null, days: {}, points: 0, voiceMissing: false, settings: { coachPin: null, capMin: 15 } };
   }
+  const adopt = (raw) => Object.assign(fresh(), raw, { settings: Object.assign(fresh().settings, raw.settings) });
   let state = fresh();
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (raw && raw.v === 1) state = Object.assign(fresh(), raw);
+    if (raw && raw.v === 1) state = adopt(raw);
   } catch (e) { /* a broken save starts clean */ }
-  for (const w of C.words) if (!state.cards[w.id]) state.cards[w.id] = E.newCard();
+  function fillCards() { for (const w of C.words) if (!state.cards[w.id]) state.cards[w.id] = E.newCard(); }
+  fillCards();
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode: play on */ }
   }
@@ -261,7 +263,7 @@
     screen(`<section class="career">
       <header class="board">
         <div class="board-cell"><span>נקודות</span><b>${state.points}</b></div>
-        <div class="board-title"><b>הקריירה של ${en(C.playerName)}</b><span>${C.stages[st].name}</span></div>
+        <div class="board-title" id="coachTap"><b>הקריירה של ${en(C.playerName)}</b><span>${C.stages[st].name}</span></div>
         <div class="board-cell"><span>ימי משחק</span><b>${matchesPlayed()}</b></div>
       </header>
 
@@ -334,7 +336,7 @@
     }
     if (s.pos >= s.queue.length) return fullTime();
     const item = s.queue[s.pos];
-    ({ intro, recognise, whistle, missing, spell, halftime, shootout })[item.type](item);
+    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout })[item.type](item);
   }
   function next() { clock(); state.session.pos++; save(); play(); }
 
@@ -344,7 +346,7 @@
     keyHandler = null;
     const s = state.session;
     let res = null;
-    if (item.wordId) {
+    if (item.wordId && !item.set) { // a test-shaped set never moves a box
       const card = state.cards[item.wordId];
       res = E.answer(card, { drill: item.type, correct, today: s.day, retry: !!item.retry });
       E.followUps(s.queue, s.pos, item, card, res, { words: C.words, speech: Voice.ok });
@@ -365,7 +367,7 @@
     save();
 
     const word = item.wordId ? WORD[item.wordId].en : item.foil;
-    const spoken = Voice.say(word);
+    const spoken = Voice.say(item.type === 'sentence' ? WORD[item.wordId].sent[0].replace('___', word) : word);
     const moved = res && res.to !== res.from;
     const fb = document.createElement('div');
     fb.className = `fb ${correct ? 'fb-goal' : 'fb-slip'}`;
@@ -434,7 +436,7 @@
 
   function recognise(item) {
     const w = WORD[item.wordId];
-    const opts = E.shuffle([w, ...E.shuffle(C.words.filter((x) => x.id !== w.id), Math.random).slice(0, 3)], Math.random);
+    const opts = E.shuffle([w, ...others(w, 3)], Math.random);
     screen(`<section class="play">${hud()}
       <div class="stage">
         <p class="kicker">מה המילה הזאת מסתירה?</p>
@@ -449,6 +451,54 @@
       e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
       $app.querySelector(`.opt[data-id="${w.id}"]`).classList.add('is-right');
       settle(item, ok, `<span class="lbl">${en(w.en)} זה ${w.emoji} ${esc(w.he)}</span>`);
+    });
+  }
+
+  // other words already on the pitch (met, or due today), to stand next to the right one
+  function others(w, n) {
+    const d = dayNum(state.session.day);
+    return E.shuffle(C.words.filter((x) => x.id !== w.id && x.day <= d), Math.random).slice(0, n);
+  }
+
+  // Word bank: the picture and the Hebrew, and the word is picked out of a bank of English words
+  function bank(item) {
+    const w = WORD[item.wordId];
+    const opts = E.shuffle([w, ...others(w, 5)], Math.random);
+    screen(`<section class="play">${hud()}
+      <div class="stage">
+        <p class="kicker">מחסן המילים: איזו מהן היא?</p>
+        <div class="cue"><span class="emoji sm">${w.emoji}</span><span class="he">${esc(w.he)}</span></div>
+        <div class="opts bank" dir="ltr">${opts.map((o) => `<button class="opt word" data-id="${o.id}">${esc(o.en)}</button>`).join('')}</div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.opt', (e) => {
+      const ok = e.currentTarget.dataset.id === w.id;
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`.opt[data-id="${w.id}"]`).classList.add('is-right');
+      settle(item, ok, `<span class="lbl">${w.emoji} ${esc(w.he)} זה ${en(w.en)}</span>`);
+    });
+  }
+
+  // Sentence fill: a sentence lost a word, and four words want the place
+  function sentence(item) {
+    const w = WORD[item.wordId];
+    const [text, wrong] = w.sent;
+    const opts = E.shuffle([w.en, ...wrong], Math.random);
+    const parts = text.split('___');
+    const gap = (inner) => `${esc(parts[0])}<b class="gap">${inner}</b>${esc(parts[1])}`;
+    screen(`<section class="play">${hud()}
+      <div class="stage">
+        <p class="kicker">מילה ברחה מהמשפט. מי מהן חוזרת למקום?</p>
+        <p class="sentence" id="sent" dir="ltr" lang="en">${gap('&nbsp;')}</p>
+        <div class="opts" dir="ltr">${opts.map((o) => `<button class="opt word" data-w="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.opt', (e) => {
+      const ok = e.currentTarget.dataset.w === w.en;
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`.opt[data-w="${w.en}"]`).classList.add('is-right');
+      document.getElementById('sent').innerHTML = gap(esc(w.en));
+      settle(item, ok, `<span class="lbl">המשפט השלם:</span><span class="sentence sm" dir="ltr" lang="en">${gap(esc(w.en))}</span>`);
     });
   }
 
@@ -528,7 +578,7 @@
       <p class="kicker">שריקת המחצית</p>
       <h1>מחצית</h1>
       <div class="score"><div><b>${s.points}</b><span>נקודות</span></div><div><b>${s.bestCombo}</b><span>הרצף הכי ארוך</span></div></div>
-      <p class="lead">המילים שותות מים ומתלחשות. בחצי השני הן מאבדות אותיות.</p>
+      <p class="lead">המילים שותות מים ומתלחשות. הן מתכננות משהו לחצי השני.</p>
       <button class="btn btn-go glow" id="ok">חצי שני</button>
     </div></section>`, 'scr-play');
     on('#ok', () => { Sfx.tap(); next(); });
@@ -568,6 +618,106 @@
       <button class="btn btn-go" id="ok">למסך הקריירה</button>
     </div></section>`, 'scr-play');
     on('#ok', career);
+  }
+
+  // ---------- the coach (parent) screen: a 2-second press on the scoreboard title, then a 4-digit code ----------
+  let pressTimer = null;
+  let coachOpenedAt = 0;
+  $app.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('#coachTap')) return;
+    pressTimer = setTimeout(() => { pressTimer = null; openCoach(); }, 2000);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => $app.addEventListener(ev, () => { clearTimeout(pressTimer); pressTimer = null; }));
+  $app.addEventListener('contextmenu', (e) => { if (e.target.closest('#coachTap')) e.preventDefault(); });
+  // The finger that did the long press lifts after the code dialog closes, and the browser sends its click
+  // to whatever is under it by then. Swallow clicks for a moment after the screen opens.
+  $app.addEventListener('click', (e) => { if (Date.now() - coachOpenedAt < 600) { e.stopPropagation(); e.preventDefault(); } }, true);
+
+  function openCoach() {
+    if (!state.settings.coachPin) { // chosen on the first open
+      const p = prompt('מסך המאמן: בחרו קוד בן 4 ספרות (ישמש מעכשיו)');
+      if (p === null) return;
+      if (!/^\d{4}$/.test(p.trim())) return alert('צריך 4 ספרות');
+      state.settings.coachPin = p.trim();
+      save();
+    } else {
+      const p = prompt('קוד מאמן');
+      if (p === null) return;
+      if (p.trim() !== state.settings.coachPin) return alert('לא הקוד');
+    }
+    coachOpenedAt = Date.now();
+    coach();
+  }
+
+  function coach(msg = '') {
+    const t = today();
+    const d = state.days[t];
+    const s = state.session && state.session.day === t ? state.session : null;
+    const seen = C.words.filter((w) => state.cards[w.id].seen);
+    const names = (ids) => (ids.length ? ids.map((id) => en(WORD[id].en)).join(', ') : 'אין');
+    const uniq = (a) => [...new Set(a)];
+    const todayHtml = d
+      ? `<p>המשחק הושלם: ${d.minutes} דקות, ${d.right} תשובות נכונות מתוך ${d.total}.</p>
+         <p>עלו שלב: ${names(d.promoted)}</p><p>ירדו שלב: ${names(d.dropped)}</p>`
+      : s ? `<p>המשחק באמצע: ${Math.round(s.ms / 60000)} דקות, ${s.right} נכונות מתוך ${s.total}.</p>
+         <p>עלו שלב: ${names(uniq(s.promoted))}</p><p>ירדו שלב: ${names(uniq(s.dropped))}</p>`
+        : '<p>עוד לא שוחק היום.</p>';
+    const byLevel = [1, 2, 3, 4, 5].map((lv) => `<td><b>${seen.filter((w) => state.cards[w.id].level === lv).length}</b><span>${C.levels[lv]}</span></td>`).join('');
+    const hard = seen.filter((w) => state.cards[w.id].misses > 0).sort((a, b) => state.cards[b.id].misses - state.cards[a.id].misses);
+    const history = Object.keys(state.days).sort().map((k) => `<tr><td dir="ltr">${k.slice(5)}</td><td>${state.days[k].minutes} דק׳</td><td>${state.days[k].right}/${state.days[k].total}</td></tr>`).join('');
+    screen(`<section class="coach">
+      <header><h1>מסך המאמן</h1><button class="btn" id="back">חזרה למשחק</button></header>
+      <p class="note">${esc(msg)}</p>
+      <div class="panel"><h2>היום</h2>${todayHtml}</div>
+      <div class="panel"><h2>המילים: ${seen.length} מתוך ${C.words.length} הוצגו</h2>
+        <table class="levels"><tr>${byLevel}</tr></table>
+        <p>מילים שכדאי לחזור עליהן בעל פה (לפי מספר הטעויות): ${hard.length ? hard.map((w) => `${en(w.en)} (${state.cards[w.id].misses})`).join(', ') : 'אין כרגע'}</p>
+        ${history ? `<table class="history"><tr><th>יום</th><th>זמן</th><th>נכונות</th></tr>${history}</table>` : ''}
+        ${state.voiceMissing ? '<p class="warn">לא נמצא קול באנגלית באייפד הזה. המילים מוצגות בלי הקראה. אפשר להוסיף קול ב: הגדרות ← נגישות ← תוכן מוקרא ← קולות ← אנגלית.</p>' : ''}
+      </div>
+      <div class="panel"><h2>הגדרות</h2>
+        <p><label>מגרש האימונים, דקות ביום: <input type="number" id="cap" min="0" max="60" value="${state.settings.capMin}"></label>
+          <button class="btn sm" id="saveCap">שמירה</button></p>
+        <p><button class="btn sm" id="pin">שינוי קוד מאמן</button>
+          <button class="btn sm" id="again">לפתוח שוב את המשחק של היום</button></p>
+      </div>
+      <div class="panel"><h2>גיבוי</h2>
+        <p>ההתקדמות נשמרת רק באייפד הזה ורק בכתובת הזאת. כדי להעביר אותה: מעתיקים את הטקסט, ומדביקים אותו כאן במכשיר או בכתובת החדשים.</p>
+        <textarea id="box" dir="ltr" rows="4" spellcheck="false"></textarea>
+        <p><button class="btn sm" id="exp">הצגת השמירה והעתקה</button> <button class="btn sm" id="imp">טעינה מהטקסט שהודבק</button></p>
+      </div>
+    </section>`, 'scr-coach');
+    on('#back', career);
+    on('#saveCap', () => {
+      const v = parseInt(document.getElementById('cap').value, 10);
+      if (!isNaN(v)) { state.settings.capMin = Math.min(60, Math.max(0, v)); save(); coach('נשמר.'); }
+    });
+    on('#pin', () => {
+      const p = prompt('קוד חדש, 4 ספרות');
+      if (p === null) return;
+      if (!/^\d{4}$/.test(p.trim())) return coach('צריך 4 ספרות.');
+      state.settings.coachPin = p.trim(); save(); coach('הקוד הוחלף.');
+    });
+    on('#again', () => {
+      if (!confirm('לפתוח שוב את המשחק של היום? המילים נשארות בשלב שלהן.')) return;
+      delete state.days[t]; state.session = null; save(); coach('המשחק של היום פתוח שוב.');
+    });
+    on('#exp', () => {
+      const box = document.getElementById('box');
+      box.value = JSON.stringify(state);
+      box.select();
+      try { navigator.clipboard.writeText(box.value).then(() => { $app.querySelector('.note').textContent = 'הועתק.'; }, () => {}); } catch (e) { /* the text is selected: copy by hand */ }
+    });
+    on('#imp', () => {
+      let raw = null;
+      try { raw = JSON.parse(document.getElementById('box').value); } catch (e) { /* below */ }
+      if (!raw || raw.v !== 1 || !raw.cards || !raw.profile) return coach('הטקסט הזה אינו שמירה של המשחק.');
+      if (!confirm('להחליף את ההתקדמות שבמכשיר הזה בשמירה שהודבקה?')) return;
+      const pin = state.settings.coachPin;
+      state = adopt(raw);
+      if (!state.settings.coachPin) state.settings.coachPin = pin;
+      fillCards(); save(); coach('השמירה נטענה.');
+    });
   }
 
   // ---------- boot ----------

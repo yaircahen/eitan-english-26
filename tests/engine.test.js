@@ -137,3 +137,36 @@ test('due order is highest level first; locked words wait for a later day', () =
   const ids = E.dueWords(words, cards, D2, Math.random).map((w) => w.id);
   assert.deepEqual(ids, ['chips', 'chicken', 'cheese']);
 });
+
+test('day 2: no foils once sh words are on the pitch; a word with no blend goes to the word bank', () => {
+  const ws = words.concat([{ id: 'pizza', en: 'pizza', day: 2 }]);
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  const q = E.buildSession({ words: ws, foils: ['shop'], cards, today: D2, dayNum: 2, speech: true });
+  assert.ok(!q.some((x) => x.foil));
+  assert.ok(q.some((x) => x.type === 'whistle' && x.wordId === 'sheep'));
+  const faces = q.filter((x) => x.wordId === 'pizza').map((x) => x.type);
+  assert.deepEqual(faces, ['intro', 'recognise', 'bank', 'bank', 'spell']);
+  // played clean, the word with no blend still reaches the squad
+  for (let pos = 0; pos < q.length; pos++) {
+    const item = q[pos];
+    if (item.type === 'intro') { cards[item.wordId].seen = true; continue; }
+    if (!item.wordId || (item.phase === 'shootout' && cards[item.wordId].level < 3)) continue;
+    const res = E.answer(cards[item.wordId], { drill: item.type, correct: true, today: D2 });
+    E.followUps(q, pos, item, cards[item.wordId], res, { words: ws, speech: true });
+  }
+  assert.equal(cards.pizza.level, 3);
+});
+
+test('sentence fill: only squad words with a sentence, at most six, marked as a set, and no follow-ups', () => {
+  const ws = words.map((w) => Object.assign({ sent: ['The ___.', ['a', 'b', 'c']] }, w));
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  for (const w of ws.filter((x) => x.day === 1)) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  const q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  const set = q.filter((x) => x.type === 'sentence');
+  assert.equal(set.length, 6);
+  assert.ok(set.every((x) => x.set && x.wordId !== 'sheep'));
+  assert.ok(q.findIndex((x) => x.type === 'halftime') < q.indexOf(set[0]));
+  const n = q.length;
+  E.followUps(q, q.indexOf(set[0]), set[0], cards[set[0].wordId], { correct: false, from: 3, to: 3 }, { words: ws, speech: true });
+  assert.equal(q.length, n);
+});
