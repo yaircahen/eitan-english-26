@@ -1,5 +1,5 @@
 /* Content for Eitan's game. Word lists are the teacher's (prd.md §4.2).
-   Days 1 and 2 so far: the 11 ch words, the 12 sh words and the first 8 food words.
+   Days 1 to 3 so far: the 11 ch words, the 12 sh words, and 8 + 12 food words.
    `sent` is a sentence of ours with the word missing, and three words that do not fit it. */
 window.CONTENT = {
   startDate: '2026-11-16', // day 1
@@ -74,6 +74,20 @@ window.CONTENT = {
     { id: 'apples', en: 'apples', he: 'תפוחים', emoji: '🍎', day: 2, line: 'מתגלגלת לכל הכיוונים כדי לא להיתפס.', sent: ['___ are red fruit.', ['bananas', 'eggs', 'chips']] },
     { id: 'bananas', en: 'bananas', he: 'בננות', emoji: '🍌', day: 2, line: 'משאירה קליפות על הדשא. תכסיס ישן.', sent: ['___ are yellow fruit.', ['apples', 'eggs', 'shoes']] },
     { id: 'cake', en: 'cake', he: 'עוגה', emoji: '🍰', day: 2, line: 'מתוקה מבחוץ, לחוצה מבפנים.', sent: ['We eat ___ at a birthday party.', ['water', 'chair', 'sheep']] },
+    // day 3: 12 food words (the colour-sort ones first). Colours and prepositions come with the Kit room, not as cards here.
+    // The other 18 food words, the verbs and the phrases move to day 4 (split decided 17 Nov: day 3 was too heavy).
+    { id: 'lemon', en: 'lemon', he: 'לימון', emoji: '🍋', day: 3, line: 'חמוצה כל כך שהיא עושה פרצוף לעצמה במראה.', sent: ['A ___ is yellow and sour.', ['chair', 'shirt', 'sheep']] },
+    { id: 'tomatoes', en: 'tomatoes', he: 'עגבניות', emoji: '🍅', day: 3, line: 'אדומה מהתרגשות, ומתגלגלת לפינה כדי להתחבא.', sent: ['I put red ___ in the salad.', ['shoes', 'chair', 'brush']] },
+    { id: 'cookie', en: 'cookie', he: 'עוגיה', emoji: '🍪', day: 3, line: 'מתפוררת מלחץ בכל פעם שמסתכלים עליה.', sent: ['I eat a ___ with my milk.', ['shoes', 'chair', 'brush']] },
+    { id: 'oranges', en: 'oranges', he: 'תפוזים', emoji: '🍊', day: 3, line: 'מתגלגלת לכיוון הקורנר ומקווה שלא יספרו אותה.', sent: ['___ are orange fruit.', ['bananas', 'eggs', 'chair']] },
+    { id: 'juice', en: 'juice', he: 'מיץ', emoji: '🧃', day: 3, line: 'סחוטה לגמרי אחרי המחצית הראשונה.', sent: ['I drink orange ___ in the morning.', ['shirt', 'chair', 'bread']] },
+    { id: 'salad', en: 'salad', he: 'סלט', emoji: '🥗', day: 3, line: 'מעורבבת כל כך שאף אחד לא יודע איפה היא מתחילה.', sent: ['I eat a ___ with tomatoes.', ['shirt', 'chair', 'shoes']] },
+    { id: 'meat', en: 'meat', he: 'בשר', emoji: '🥩', day: 3, line: 'קשוחה, אבל נכנעת מול מזלג אחד.', sent: ['A hamburger is made of ___.', ['water', 'cake', 'bananas']] },
+    { id: 'hamburger', en: 'hamburger', he: 'המבורגר', emoji: '🍔', day: 3, line: 'מתחבאת בין שתי לחמניות ומקווה שיחשבו שהיא כריך.', sent: ['I eat a ___ with chips.', ['shirt', 'chair', 'milk']] },
+    { id: 'jam', en: 'jam', he: 'ריבה', emoji: '🍓', day: 3, line: 'דביקה, ונצמדת לכל מי שעובר לידה.', sent: ['I put ___ on my bread.', ['shoes', 'fish', 'chair']] },
+    { id: 'carrots', en: 'carrots', he: 'גזרים', emoji: '🥕', day: 3, line: 'כתומה, ארוכה, ובטוחה שהארנבים לא יזהו אותה.', sent: ['___ are orange vegetables.', ['apples', 'shoes', 'cake']] },
+    { id: 'tea', en: 'tea', he: 'תה', emoji: '🍵', day: 3, line: 'שקטה בתוך הכוס ומחכה שיפסיקו להסתכל.', sent: ['I drink hot ___ with lemon.', ['shirt', 'bread', 'chair']] },
+    { id: 'coffee', en: 'coffee', he: 'קפה', emoji: '☕', day: 3, line: 'ערה כל הלילה ומרעידה את הכוס.', sent: ['My dad drinks ___ in the morning.', ['shirt', 'bread', 'chair']] },
   ],
 
   /* The table. Clubs of ours: a football word every child knows, and a word from the test.
