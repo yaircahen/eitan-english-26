@@ -1,4 +1,4 @@
-// Plays day 1 end to end in Chromium with speech stubbed, then checks day 2.
+// Plays days 1 and 2 end to end in Chromium with speech stubbed, then opens the coach screen.
 // Run: python3 -m http.server 8765 --bind 127.0.0.1 &   then   node tests/e2e.js [screenshot-dir]
 const { chromium } = require('playwright');
 const assert = require('node:assert');
@@ -35,65 +35,117 @@ const shots = process.argv[2];
   assert.match(await page.textContent('.match'), /11 מילים חדשות/);
   await page.click('#go');
 
-  // play: answer everything right except the first spelling of "chocolate"
-  let missed = false; const seen = new Set();
-  for (let i = 0; i < 400; i++) {
-    await page.waitForSelector('.stage');
-    if (await page.$('.fb')) { await page.click('.fb'); continue; }
-    const kicker = (await page.textContent('.kicker')).trim();
-    if (await page.$('#ok')) {
-      if (/יריבה חדשה/.test(kicker) && !seen.has('intro')) { seen.add('intro'); await shot('05-intro'); }
-      if (/מחצית/.test(kicker)) await shot('08-halftime');
-      if (/שריקת הסיום/.test(kicker)) { await shot('11-fulltime'); break; }
-      await page.click('#ok'); continue;
-    }
-    if (await page.$('.opt.blend')) {
-      if (!seen.has('wh')) { seen.add('wh'); await shot('07-whistle'); }
-      const said = (await page.evaluate(() => window.__said[window.__said.length - 1])).replace(/\.$/, '');
-      await page.click(`.opt[data-b="${words.some((w) => w.en === said) ? 'ch' : 'sh'}"]`);
-    } else if (await page.$('.opt')) {
-      if (!seen.has('rec')) { seen.add('rec'); await shot('06-recognise'); }
-      const en = (await page.textContent('#say')).replace('🔊', '').trim();
-      await page.click(`.opt[data-id="${en}"]`);
-    } else {
-      const he = (await page.textContent('.cue .he')).trim();
-      const w = byHe[he];
-      const pre = (await page.textContent('#typed span:first-child'));
-      const full = !(await page.$('.typed .slot'));
-      if (!full && !seen.has('mis')) { seen.add('mis'); await shot('09-missing'); }
-      if (full && w.en === 'chocolate' && !missed) {
-        missed = true; await type('choklate'); await page.click('[data-k="ENTER"]');
-        await page.waitForSelector('.fb-slip'); await page.waitForTimeout(350); await shot('10-spell-miss');
-        await page.click('#fbnext'); continue;
+  const bySent = Object.fromEntries(words.map((w) => [w.sent[0].replace('___', '').replace(/\s+/g, ' ').trim(), w]));
+  const lastSaid = async () => (await page.evaluate(() => window.__said[window.__said.length - 1])).replace(/\.$/, '');
+  const seen = new Set();
+  const once = async (key, name) => { if (!seen.has(key)) { seen.add(key); await shot(name); } };
+
+  // Plays a match to the final whistle. miss = a word whose first full spelling is typed wrong.
+  async function playMatch(miss) {
+    let missed = false; const faces = new Set();
+    for (let i = 0; i < 900; i++) {
+      await page.waitForSelector('.stage, .career');
+      if (await page.$('.career')) return faces;
+      if (await page.$('.pack')) {
+        for (const el of await page.$$('.pcard')) await el.click();
+        await once('pack', '19-pack');
+        await page.click('#packok'); continue;
       }
-      await type(full ? w.en : 'ch'); assert.equal(pre, full ? '' : w.en.slice(0, w.en.indexOf('ch')));
-      await page.click('[data-k="ENTER"]');
+      if (await page.$('.fb')) { await page.click('.fb').catch(() => {}); continue; }
+      const kicker = (await page.textContent('.kicker')).trim();
+      if (await page.$('#ok')) {
+        if (/יריבה חדשה/.test(kicker)) await once('intro', '05-intro');
+        if (/מחצית/.test(kicker)) await once('half', '08-halftime');
+        if (/שריקת הסיום/.test(kicker)) await once('full', '11-fulltime');
+        await page.click('#ok'); continue;
+      }
+      if (await page.$('.opt.blend')) {
+        faces.add('whistle'); await once('wh', '07-whistle');
+        const said = await lastSaid();
+        const w = words.find((x) => x.en === said);
+        await page.click(`.opt[data-b="${w ? w.blend : 'sh'}"]`);
+      } else if (await page.$('#sent')) {
+        faces.add('sentence'); await once('sent', '16-sentence');
+        const text = (await page.textContent('#sent')).replace(/\s+/g, ' ').trim();
+        assert.ok(bySent[text], `sentence not found: ${text}`);
+        await page.click(`.opt[data-w="${bySent[text].en}"]`);
+      } else if (await page.$('.opt.word')) {
+        faces.add('bank'); await once('bank', '17-bank');
+        await page.click(`.opt[data-id="${byHe[(await page.textContent('.cue .he')).trim()].id}"]`);
+      } else if (await page.$('.opt')) {
+        faces.add('recognise'); await once('rec', '06-recognise');
+        const en = (await page.textContent('#say')).replace('🔊', '').trim();
+        await page.click(`.opt[data-id="${en}"]`);
+      } else {
+        const w = byHe[(await page.textContent('.cue .he')).trim()];
+        const pre = (await page.textContent('#typed span:first-child'));
+        const full = !(await page.$('.typed .slot'));
+        faces.add(full ? 'spell' : 'missing');
+        if (!full) await once('mis', '09-missing');
+        if (full && w.en === miss && !missed) {
+          missed = true; await type('choklate'); await page.click('[data-k="ENTER"]');
+          await page.waitForSelector('.fb-slip'); await page.waitForTimeout(350); await shot('10-spell-miss');
+          await page.click('#fbnext'); continue;
+        }
+        await type(full ? w.en : w.blend); assert.equal(pre, full ? '' : w.en.slice(0, w.en.indexOf(w.blend)));
+        await page.click('[data-k="ENTER"]');
+      }
+      await page.waitForSelector('.fb');
+      await page.click('.fb');
     }
-    await page.waitForSelector('.fb');
-    await page.click('.fb');
+    throw new Error('the match did not end');
   }
-  await page.click('#ok');
+
+  // day 1: everything right except the first spelling of "chocolate" (a shoot-out kick: points only)
+  await playMatch('chocolate');
   await shot('12-career-after');
-  let st = await page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
-  assert.ok(Object.values(st.cards).every((c) => c.level === 3), 'all 11 in the squad after day 1');
-  assert.equal(st.cards.chocolate.misses, 1);
+  const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
+  const day1 = words.filter((w) => w.day === 1), day2 = words.filter((w) => w.day === 2);
+  let st = await load();
+  assert.ok(day1.every((w) => st.cards[w.id].level === 3), 'all 11 in the squad after day 1');
+  assert.ok(day2.every((w) => !st.cards[w.id].seen), 'day-2 words stay in the stands on day 1');
+  assert.equal(st.cards.chocolate.misses, 0, 'a shoot-out kick never touches the card');
+  const owned = Object.keys(st.album).length;
+  assert.ok(owned >= 3 && owned <= 6, 'two packs of three cards on day 1');
+  assert.match(await page.textContent('.table li.mine'), /Barcelona/);
+  await page.click('#album'); await shot('20-album');
+  assert.equal((await page.$$('.agrid .pcard-face:not(.empty)')).length, owned);
+  await page.click('#back');
   assert.ok(st.days['2026-11-16'].done);
   assert.match(await page.textContent('.match'), /שוחק/);
   assert.equal(await page.$('#go'), null, 'one match a day');
 
-  // day 2: the 11 words come back for the lock, typed
+  // day 2: the 11 words come back for the lock, then the sh and food words, the word bank and the sentences
   await page.goto(BASE + '?day=2026-11-17');
-  assert.match(await page.textContent('.match'), /11 מילים מהסגל/);
+  assert.match(await page.textContent('.match'), /20 מילים חדשות.*11 מילים מהסגל/s);
   await page.click('#go');
-  for (let i = 0; i < 11; i++) {
-    const he = (await page.textContent('.cue .he')).trim();
-    await type(byHe[he].en); await page.click('[data-k="ENTER"]');
-    await page.waitForSelector('.fb'); await page.click('.fb');
-  }
-  await page.waitForSelector('#ok'); await page.click('#ok');
-  st = await page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
-  assert.ok(Object.values(st.cards).every((c) => c.level === 4), 'all at level 4 after day 2');
+  const faces = await playMatch();
+  for (const f of ['whistle', 'sentence', 'bank', 'recognise', 'missing', 'spell']) assert.ok(faces.has(f), `day 2 has ${f}`);
+  st = await load();
+  assert.ok(day1.every((w) => st.cards[w.id].level === 4), 'day-1 words at level 4 after day 2');
+  assert.ok(day2.every((w) => st.cards[w.id].level === 3), 'day-2 words in the squad after day 2');
   await shot('13-career-day2');
+
+  // the coach screen: a long press, a code chosen on the first open, export, and today's match opened again
+  const dialogs = [];
+  page.on('dialog', (d) => { dialogs.push(d.message()); d.accept(d.type() === 'prompt' ? '4321' : undefined); });
+  const longPress = async () => {
+    await page.dispatchEvent('#coachTap', 'pointerdown');
+    await page.waitForSelector('.coach', { timeout: 4000 }); await page.waitForTimeout(700);
+  };
+  await longPress();
+  assert.match(dialogs[0], /בחרו קוד/);
+  assert.match(await page.textContent('.coach'), /המשחק הושלם/);
+  await shot('18-coach');
+  await page.click('#exp');
+  assert.equal(JSON.parse(await page.inputValue('#box')).settings.coachPin, '4321');
+  await page.click('#again');
+  assert.equal((await load()).days['2026-11-17'], undefined);
+  await page.click('#back');
+  assert.match(await page.textContent('.match'), /יום מנוחה/, 'reopened, but every word already had its turn today');
+  await longPress();
+  assert.match(dialogs[dialogs.length - 1], /קוד מאמן/);
+  await page.click('#back');
 
   // portrait iPad
   await page.setViewportSize({ width: 768, height: 1024 });

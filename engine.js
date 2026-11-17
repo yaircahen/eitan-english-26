@@ -66,6 +66,21 @@
   function canWhistle(word, speech) {
     return !!(speech && word.blend && !word.silent);
   }
+  /* The second face of a new word: by ear if it has a blend that is heard, by its missing blend if not,
+     and from the word bank when it has no blend at all. */
+  function secondFace(word, speech) {
+    return canWhistle(word, speech) ? 'whistle' : word.blend ? 'missing' : 'bank';
+  }
+  /* A squad word's turn: one of the faces the test asks for (read and translate, pick from the bank, hear or
+     fill the blend). Full spelling is not one of them: it lives in the shoot-out, for points only. */
+  function squadFace(word, speech, rng) {
+    const faces = ['recognise', 'bank'];
+    if (word.blend) faces.push('missing');
+    if (canWhistle(word, speech)) faces.push('whistle');
+    return faces[Math.floor(rng() * faces.length)];
+  }
+  const SET_SIZE = 6; // sentences in the day's Sentence fill
+  const KICKS = 5;    // shoot-out kicks on a day with no new words
 
   /* Seen words worth a turn today, highest level first, shuffled inside a level. */
   function dueWords(words, cards, today, rng) {
@@ -84,25 +99,35 @@
     return out;
   }
 
-  /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out. */
+  /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
+     Items marked `set` (Sentence fill, the shoot-out) never move a box. */
   function buildSession({ words, foils = [], cards, today, dayNum, speech, rng = Math.random }) {
     const q = [];
     for (const w of dueWords(words, cards, today, rng)) {
-      q.push({ type: cards[w.id].level >= 3 ? 'spell' : 'recognise', wordId: w.id, phase: 'warmup' });
+      q.push({ type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' });
     }
 
     const fresh = words.filter((w) => !(cards[w.id] && cards[w.id].seen) && w.day <= dayNum);
-    if (!fresh.length) return q;
+    // Sentence fill (a test-shaped set, never moves a box): words already in the squad, in a sentence.
+    const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
+      .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
+    if (!fresh.length) {
+      if (!q.length) return q;
+      const kickers = shuffle(q.map((x) => words.find((w) => w.id === x.wordId)), rng).slice(0, KICKS);
+      return q.concat(sentences, [{ type: 'shootout' }], kickers.map((w) => ({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' })));
+    }
 
-    const foilPool = speech ? shuffle(foils, rng) : [];
+    // sh words by ear only are needed while no sh word is on the pitch; after that the whistle has both sides
+    const mixed = words.some((w) => w.blend === 'sh' && w.day <= dayNum);
+    const foilPool = speech && !mixed ? shuffle(foils, rng) : [];
     for (let i = 0; i < fresh.length; i += BATCH) {
       const batch = fresh.slice(i, i + BATCH);
       for (const w of batch) q.push({ type: 'intro', wordId: w.id, phase: 'first' });
       for (const w of shuffle(batch, rng)) q.push({ type: 'recognise', wordId: w.id, phase: 'first' });
       const second = batch.map((w) => ({
-        type: canWhistle(w, speech) ? 'whistle' : 'missing', wordId: w.id, phase: 'first',
+        type: secondFace(w, speech), wordId: w.id, phase: 'first',
       }));
-      // sh words by ear only, so the whistle is a real choice. They carry no card.
+      // They carry no card.
       for (const f of foilPool.splice(0, Math.round(batch.length / 2))) {
         second.push({ type: 'whistle', foil: f, phase: 'first' });
       }
@@ -110,15 +135,17 @@
     }
 
     q.push({ type: 'halftime' });
-    for (const w of shuffle(fresh, rng)) q.push({ type: 'missing', wordId: w.id, phase: 'second' });
+    q.push(...sentences);
+    for (const w of shuffle(fresh, rng)) q.push({ type: w.blend ? 'missing' : 'bank', wordId: w.id, phase: 'second' });
     q.push({ type: 'shootout' });
-    for (const w of shuffle(fresh, rng)) q.push({ type: 'spell', wordId: w.id, phase: 'shootout' });
+    for (const w of shuffle(fresh, rng)) q.push({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' });
     return q;
   }
 
   function nextDrill(card, word, lastType, speech) {
     if (card.level === 1) return 'recognise';
-    const cands = ['missing', 'whistle', 'recognise'].filter((d) => d !== 'whistle' || canWhistle(word, speech));
+    const cands = ['missing', 'whistle', 'bank', 'recognise'].filter((d) => (
+      d === 'whistle' ? canWhistle(word, speech) : d === 'missing' ? !!word.blend : true));
     return cands.find((d) => d !== lastType && !card.streakDrills.includes(d))
       || cands.find((d) => d !== lastType)
       || cands[0];
@@ -127,7 +154,7 @@
   /* After an answer: keep a fast-track word coming until it is in the squad,
      and bring a missed squad word back once at the very end (no box change). */
   function followUps(queue, pos, item, card, res, { words, speech }) {
-    if (!item.wordId || item.retry || item.type === 'intro') return;
+    if (!item.wordId || item.retry || item.set || item.type === 'intro') return;
     const id = item.wordId;
     if (card.level < 3) {
       if (item.phase === 'shootout') return;
@@ -144,7 +171,7 @@
     }
   }
 
-  const Engine = { newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, shuffle };
+  const Engine = { newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, squadFace, shuffle };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;
 })(typeof window !== 'undefined' ? window : globalThis);
