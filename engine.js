@@ -71,7 +71,16 @@
   function secondFace(word, speech) {
     return canWhistle(word, speech) ? 'whistle' : word.blend ? 'missing' : 'bank';
   }
+  /* A squad word's turn: one of the faces the test asks for (read and translate, pick from the bank, hear or
+     fill the blend). Full spelling is not one of them: it lives in the shoot-out, for points only. */
+  function squadFace(word, speech, rng) {
+    const faces = ['recognise', 'bank'];
+    if (word.blend) faces.push('missing');
+    if (canWhistle(word, speech)) faces.push('whistle');
+    return faces[Math.floor(rng() * faces.length)];
+  }
   const SET_SIZE = 6; // sentences in the day's Sentence fill
+  const KICKS = 5;    // shoot-out kicks on a day with no new words
 
   /* Seen words worth a turn today, highest level first, shuffled inside a level. */
   function dueWords(words, cards, today, rng) {
@@ -90,18 +99,23 @@
     return out;
   }
 
-  /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out. */
+  /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
+     Items marked `set` (Sentence fill, the shoot-out) never move a box. */
   function buildSession({ words, foils = [], cards, today, dayNum, speech, rng = Math.random }) {
     const q = [];
     for (const w of dueWords(words, cards, today, rng)) {
-      q.push({ type: cards[w.id].level >= 3 ? 'spell' : 'recognise', wordId: w.id, phase: 'warmup' });
+      q.push({ type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' });
     }
 
     const fresh = words.filter((w) => !(cards[w.id] && cards[w.id].seen) && w.day <= dayNum);
     // Sentence fill (a test-shaped set, never moves a box): words already in the squad, in a sentence.
     const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
       .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
-    if (!fresh.length) return q.concat(sentences);
+    if (!fresh.length) {
+      if (!q.length) return q;
+      const kickers = shuffle(q.map((x) => words.find((w) => w.id === x.wordId)), rng).slice(0, KICKS);
+      return q.concat(sentences, [{ type: 'shootout' }], kickers.map((w) => ({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' })));
+    }
 
     // sh words by ear only are needed while no sh word is on the pitch; after that the whistle has both sides
     const mixed = words.some((w) => w.blend === 'sh' && w.day <= dayNum);
@@ -124,7 +138,7 @@
     q.push(...sentences);
     for (const w of shuffle(fresh, rng)) q.push({ type: w.blend ? 'missing' : 'bank', wordId: w.id, phase: 'second' });
     q.push({ type: 'shootout' });
-    for (const w of shuffle(fresh, rng)) q.push({ type: 'spell', wordId: w.id, phase: 'shootout' });
+    for (const w of shuffle(fresh, rng)) q.push({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' });
     return q;
   }
 
@@ -157,7 +171,7 @@
     }
   }
 
-  const Engine = { newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, shuffle };
+  const Engine = { newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, squadFace, shuffle };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;
 })(typeof window !== 'undefined' ? window : globalThis);

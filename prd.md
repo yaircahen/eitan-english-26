@@ -119,6 +119,7 @@ Session-based, not calendar-based. Five levels:
 - **Review order:** highest due level first, down to level 1, shuffled within a level.
 - **Leech rule:** four misses on a word makes it a "tricky" word, which gets a picture cue, a Hebrew memory line, and a mention on the parent screen.
 - **Strict marking:** spellings are exact. A wrong letter is shown in place so a miss teaches.
+- **Spelling is for the shoot-out only (decided 17 Nov).** The test asks the children to read, translate, pick a word from a bank and fill in a missing blend, never to write a whole word from memory. So levels climb only on those faces. Full spelling is the penalty shoot-out at the end of every match: points and combo, no box move.
 - **New-word schedule (target):** day 1 about 10, days 2 and 3 about 20 each, day 4 about 10, none after day 4. A simulation of these rules (about 12 s per interaction, 85% accuracy on fresh items, 75–85% later) gives 91–97% mastery by Mon 23 Nov for this schedule. The build verifies the model against the real engine.
 
 ### 6.2 Card types
@@ -129,7 +130,7 @@ Each word is one card with several faces. The drill chosen depends on its level.
 |---|---|---|
 | Recognise | Hear or see the English word → pick the Hebrew (or picture) | levels 1–2 |
 | Translate | Hebrew → pick the English word | levels 2–3 |
-| Spell | Hebrew or picture → **type** the word on the keyboard | level 3 and up |
+| Spell | Hebrew or picture → **type** the word on the keyboard | shoot-out only, never moves a box |
 | Blend | Word with the blend missing → pick or type `sh` / `ch` | any |
 | Whistle | Hear the word → which blend? | any, `ch` / `sh` words only |
 | Sentence | A sentence with the word blanked → pick | level 3 and up |
@@ -266,7 +267,7 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 |---|---|
 | Day 1 slips because the build takes the evening | Milestone 1 is the smallest playable game (§13); the schedule has about a day of slack |
 | iPad speech is missing or unnatural | Test on the real iPad; the parent screen shows when the voice is missing; the text stays on screen |
-| Tapping instead of spelling, and a paper test that needs spelling | Level 3 and above require typing; the Missing-letters and Spell drills type, not pick |
+| Tapping instead of writing on a paper test | The Missing-letters drill types the blend; every match ends with a typed shoot-out |
 | The 25–30 minute heavy days feel long | Two halves, a half-time pack, the golden ball, the combo meter |
 | Streak anxiety | Rest days, a free freeze, no wipe |
 | Real names or club marks cause a problem | Names as text only; no crest, no photos; the owner decides what to publish |

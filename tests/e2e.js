@@ -96,7 +96,7 @@ const shots = process.argv[2];
     throw new Error('the match did not end');
   }
 
-  // day 1: everything right except the first spelling of "chocolate"
+  // day 1: everything right except the first spelling of "chocolate" (a shoot-out kick: points only)
   await playMatch('chocolate');
   await shot('12-career-after');
   const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
@@ -104,7 +104,7 @@ const shots = process.argv[2];
   let st = await load();
   assert.ok(day1.every((w) => st.cards[w.id].level === 3), 'all 11 in the squad after day 1');
   assert.ok(day2.every((w) => !st.cards[w.id].seen), 'day-2 words stay in the stands on day 1');
-  assert.equal(st.cards.chocolate.misses, 1);
+  assert.equal(st.cards.chocolate.misses, 0, 'a shoot-out kick never touches the card');
   const owned = Object.keys(st.album).length;
   assert.ok(owned >= 3 && owned <= 6, 'two packs of three cards on day 1');
   assert.match(await page.textContent('.table li.mine'), /Barcelona/);

@@ -88,8 +88,7 @@ function sit(cards, today, dayNum, answers, speech = true) {
   for (let pos = 0; pos < q.length; pos++) {
     const item = q[pos];
     if (item.type === 'intro') { cards[item.wordId].seen = true; continue; }
-    if (!item.wordId) continue;
-    if (item.phase === 'shootout' && cards[item.wordId].level < 3) continue;
+    if (!item.wordId || item.set) continue; // sets and the shoot-out never move a box
     const res = E.answer(cards[item.wordId], { drill: item.type, correct: answers(item, asked++), today, retry: !!item.retry });
     E.followUps(q, pos, item, cards[item.wordId], res, { words, speech });
     assert.ok(q.length < 400, 'the queue must end');
@@ -116,7 +115,7 @@ test('misses bring words back, the sitting still ends, and nothing drops below 3
   assert.ok(Object.values(all).filter((c) => c.seen).every((c) => c.level === 1));
 });
 
-test('three clean days take a word to the top; a spell miss in the squad is retried once', () => {
+test('three clean days take a word to the top; a miss in the squad is retried once', () => {
   const cards = cardsFor();
   sit(cards, D1, 1, () => true);
   const q2 = sit(cards, D2, 1, (item) => !(item.wordId === 'chips' && !item.retry));
@@ -150,7 +149,7 @@ test('day 2: no foils once sh words are on the pitch; a word with no blend goes 
   for (let pos = 0; pos < q.length; pos++) {
     const item = q[pos];
     if (item.type === 'intro') { cards[item.wordId].seen = true; continue; }
-    if (!item.wordId || (item.phase === 'shootout' && cards[item.wordId].level < 3)) continue;
+    if (!item.wordId || item.set) continue;
     const res = E.answer(cards[item.wordId], { drill: item.type, correct: true, today: D2 });
     E.followUps(q, pos, item, cards[item.wordId], res, { words: ws, speech: true });
   }
@@ -169,4 +168,16 @@ test('sentence fill: only squad words with a sentence, at most six, marked as a 
   const n = q.length;
   E.followUps(q, q.indexOf(set[0]), set[0], cards[set[0].wordId], { correct: false, from: 3, to: 3 }, { words: ws, speech: true });
   assert.equal(q.length, n);
+});
+
+test('spelling is only in the shoot-out, marked as a set, and squad words get test faces', () => {
+  const cards = cardsFor();
+  sit(cards, D1, 1, () => true);
+  const q = E.buildSession({ words, cards, today: D2, dayNum: 1, speech: true });
+  const so = q.findIndex((x) => x.type === 'shootout');
+  assert.ok(so > 0, 'a review day still ends with a shoot-out');
+  assert.ok(q.filter((x) => x.type === 'spell').every((x) => x.set && q.indexOf(x) > so));
+  assert.equal(q.filter((x) => x.type === 'spell').length, 5);
+  assert.ok(q.slice(0, so).every((x) => ['recognise', 'bank', 'missing', 'whistle', 'sentence'].includes(x.type)));
+  assert.ok(!q.some((x) => x.wordId === 'school' && x.type === 'whistle'));
 });
