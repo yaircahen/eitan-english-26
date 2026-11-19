@@ -21,6 +21,8 @@ window.CONTENT = {
       bank: ['נשלפה מהמחסן!', 'בחירה של קפטן!', 'נמצאה בין כולן!', 'הוצאה מהשורה!', 'אין לה לאן לברוח!'],
       sentence: ['המשפט שלם!', 'מסירה מדויקת!', 'נכנסה בדיוק לרווח!', 'המשפט סגור!', 'חיבור מושלם!'],
       colour: ['החולצה הנכונה!', 'המחסנאי מוחא כפיים!', 'צבע מדויק!', 'ישר מהמתלה!', 'החולצה נמצאה!'],
+      dinner: ['הטבח מרוצה!', 'בדיוק מה שחסר!', 'ישר לסיר!', 'המצרך הנכון!', 'ארוחה של אלופים!'],
+      letter: ['זוג מושלם!', 'האותיות נפגשו!', 'גדולה וקטנה, יחד!', 'הזוג הושלם!', 'מספר נכון על החולצה!'],
       where: ['הכדור אותר!', 'עין של חלוץ!', 'בדיוק שם!', 'הכדור לא מצליח להתחבא!', 'נמצא!'],
       spell: ['גוווול!', 'ישר לחיבורים!', 'רשת!', 'פנדל מושלם!', 'השוער אפילו לא זז!', 'בעיטה של קפטן!'],
     },
@@ -140,6 +142,24 @@ window.CONTENT = {
     },
     preps: [{ en: 'in', he: 'בתוך' }, { en: 'on', he: 'על' }, { en: 'under', he: 'מתחת' }, { en: 'near', he: 'ליד' }],
   },
+
+  /* Team dinner (exercise 5 of the test): "I want to make a pizza. I need ___." Opens on day `from`, three dishes a day.
+     `need` are ingredients nobody would argue with; `not` are words that clearly do not go in. All are word ids. */
+  dinner: {
+    from: 6,
+    dishes: [
+      { dish: 'a pizza', need: ['cheese', 'tomatoes'], not: ['jam', 'tea', 'shoes', 'cookie', 'juice', 'icecream'] },
+      { dish: 'a salad', need: ['tomatoes', 'carrots', 'peppers', 'onions'], not: ['chocolate', 'cake', 'coffee', 'shirt', 'jam', 'cookie'] },
+      { dish: 'a sandwich', need: ['bread', 'cheese'], not: ['juice', 'tea', 'chair', 'water', 'coffee', 'sheep'] },
+      { dish: 'a milkshake', need: ['milk', 'chocolate', 'bananas'], not: ['onions', 'meat', 'fish', 'peppers', 'shoes', 'bread'] },
+      { dish: 'a cake', need: ['eggs', 'milk', 'chocolate'], not: ['onions', 'meat', 'fish', 'peppers', 'spinach', 'brush'] },
+      { dish: 'a hamburger', need: ['meat', 'bread'], not: ['jam', 'juice', 'cake', 'cookie', 'tea', 'shirt'] },
+    ],
+  },
+
+  /* Kit numbers (exercise 6 of the test): the capital and the small letter of every pair, Aa to Zz.
+     One set a day from day `from`; after the last set, eight letters a day from the whole alphabet. */
+  letters: { from: 5, sets: ['abcdef', 'ghijkl', 'mnopqr', 'stuvwxyz'], mixed: 8 },
 
   /* The Match report (prd.md §4.6, exercise 8 of the test): short texts of ours, written from the test words.
      Three of them, one a day in turn from day `from`. Each has three yes/no lines and three one-word completions.

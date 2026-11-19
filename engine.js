@@ -124,7 +124,7 @@
 
   /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
      Items marked `set` (Sentence fill, the shoot-out) never move a box. */
-  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, rng = Math.random }) {
+  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, dinner = null, letters = null, rng = Math.random }) {
     const warm = dueWords(words, cards, today, rng).map((w) => (
       { type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' }));
 
@@ -133,6 +133,19 @@
     const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
       .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
     const room = kit && dayNum >= kit.from ? kitItems(kit, cards, kitIntro, rng) : [];
+    const set = (x) => Object.assign(x, { set: true, phase: 'second' });
+    // Kit numbers: the day's letters, half from the capital and half from the small one
+    if (letters && dayNum >= letters.from) {
+      const k = dayNum - letters.from;
+      const todays = k < letters.sets.length ? [...letters.sets[k]] : shuffle([...letters.sets.join('')], rng).slice(0, letters.mixed);
+      shuffle(todays, rng).forEach((l, i) => room.push(set({ type: 'letter', letter: l, rev: i % 2 === 1 })));
+    }
+    // Team dinner: three dishes, one thing each of them needs and three things it does not
+    if (dinner && dayNum >= dinner.from) {
+      for (const d of shuffle(dinner.dishes, rng).slice(0, 3)) {
+        room.push(set({ type: 'dinner', dish: d.dish, a: shuffle(d.need, rng)[0], wrong: shuffle(d.not, rng).slice(0, 3) }));
+      }
+    }
     // the Match report: one text a day, in turn. A set, like the Kit room.
     if (report && dayNum >= report.from) {
       room.push({ type: 'report', passage: (dayNum - report.from) % report.passages.length, set: true, phase: 'second' });

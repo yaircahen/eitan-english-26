@@ -253,3 +253,24 @@ test('the Match report: one text a day in turn from its opening day, as a set', 
   assert.deepEqual([2, 3, 4, 5].map((d) => at(d)[0].passage), [0, 1, 2, 0]);
   assert.ok(at(2)[0].set);
 });
+
+test('Kit numbers and Team dinner: the day\'s letter set, then mixed; three dishes with one fitting word', () => {
+  const letters = { from: 2, sets: ['abc', 'def'], mixed: 4 };
+  const dinner = { from: 3, dishes: ['p', 'q', 'r', 's'].map((dish) => ({ dish, need: ['n1', 'n2'], not: ['x1', 'x2', 'x3', 'x4'] })) };
+  const cards = cardsFor();
+  sit(cards, D1, 1, () => true);
+  const at = (dayNum, t) => E.buildSession({ words, cards, today: D2, dayNum, speech: true, letters, dinner }).filter((x) => x.type === t);
+  assert.equal(at(1, 'letter').length, 0);
+  assert.deepEqual(at(2, 'letter').map((x) => x.letter).sort(), ['a', 'b', 'c']);
+  assert.deepEqual(at(3, 'letter').map((x) => x.letter).sort(), ['d', 'e', 'f']);
+  const mixed = at(4, 'letter');
+  assert.equal(mixed.length, 4);
+  assert.equal(new Set(mixed.map((x) => x.letter)).size, 4);
+  assert.ok(mixed.every((x) => x.set && 'abcdef'.includes(x.letter)));
+  assert.ok(at(2, 'letter').some((x) => x.rev) && at(2, 'letter').some((x) => !x.rev));
+  assert.equal(at(2, 'dinner').length, 0);
+  const ds = at(3, 'dinner');
+  assert.equal(ds.length, 3);
+  assert.equal(new Set(ds.map((x) => x.dish)).size, 3);
+  assert.ok(ds.every((x) => x.set && ['n1', 'n2'].includes(x.a) && x.wrong.length === 3 && x.wrong.every((id) => id.startsWith('x'))));
+});

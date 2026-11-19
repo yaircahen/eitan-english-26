@@ -249,7 +249,7 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | 3 | Wed 18 | 12 food words (lemon, tomatoes, cookie, oranges, juice, salad, meat, hamburger, jam, carrots, tea, coffee), colours, prepositions, letters 3 | up to 30 min. Split decided 17 Nov: 31 reviews are already due, so fewer new words |
 | 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), letters 4–5 | up to 25 min. New words in the first half, review in the second |
 | 5 | Fri 20 | the ten phrases (moved from day 4 by the owner, 19 Nov), the Kit room opens (colours, colour sort, in / on / under / near), review and the reading passage | |
-| 6 | Sat 21 | none, review | short |
+| 6 | Sat 21 | none, review. Team dinner opens (built 19 Nov). Kit numbers run from day 5: Aa–Ff, Gg–Ll, Mm–Rr, Ss–Zz, then eight mixed pairs a day | |
 | 7 | Sun 22 | none, review, the first test-shaped mock | |
 | 8 | Mon 23 | none. **Target day: every word at level 5** | second mock |
 | 9 | Tue 24 | none. Buffer and the **Clásico** mock | |

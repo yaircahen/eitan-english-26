@@ -25,6 +25,9 @@ const shots = process.argv[2];
   const kit = await page.evaluate(() => window.CONTENT.kit);
   const passages = await page.evaluate(() => window.CONTENT.report.passages);
   let reportMiss = false;
+  const dinners = await page.evaluate(() => window.CONTENT.dinner.dishes);
+  for (const d of dinners) for (const id of [...d.need, ...d.not]) assert.ok(words.some((w) => w.id === id), `dinner word ${id}`);
+  for (const d of dinners) assert.ok(!d.need.some((id) => d.not.includes(id)));
   const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
   let sortMiss = false;
   const byHe = Object.fromEntries(words.map((w) => [w.he, w]));
@@ -97,7 +100,21 @@ const shots = process.argv[2];
         await page.waitForFunction((f) => document.getElementById('food').textContent.trim() !== f || document.getElementById('ok'), food);
         continue;
       }
-      if (await page.$('.kit-colour')) {
+      if (await page.$('.kit-dinner')) {
+        faces.add('dinner'); await once('dinner', '39-dinner');
+        const dish = await page.getAttribute('#dsent', 'data-dish');
+        const d = dinners.find((x) => x.dish === dish);
+        const ids = await page.$$eval('.opt', (els) => els.map((x) => x.dataset.id));
+        const right = ids.filter((id) => d.need.includes(id));
+        assert.equal(right.length, 1, 'one word fits the dish');
+        assert.ok(ids.every((id) => d.need.includes(id) || d.not.includes(id)));
+        await page.click(`.opt[data-id="${right[0]}"]`);
+      } else if (await page.$('.kit-letter')) {
+        faces.add('letter');
+        const cue = (await page.textContent('#lcue')).trim();
+        await once(cue === cue.toUpperCase() ? 'lcap' : 'lsmall', cue === cue.toUpperCase() ? '40-letter-capital' : '41-letter-small');
+        await page.click(`.opt[data-l="${cue.toLowerCase()}"]`);
+      } else if (await page.$('.kit-colour')) {
         faces.add('colour');
         const rev = await page.$('#cue');
         await once(rev ? 'crev' : 'col', rev ? '29-colour-word' : '28-colour-shirt');
@@ -242,7 +259,9 @@ const shots = process.argv[2];
   assert.deepEqual(['kitintro', 'colour', 'sort', 'whereintro', 'where'].map((t) => q5.filter((x) => x.type === t).length), [1, 6, 1, 1, 4]);
   assert.ok(q5.every((x) => x.type !== 'spell' || !x.wordId.startsWith('p-')));
   const f5 = await playMatch();
-  for (const f of ['spell', 'colour', 'sort', 'where', 'report']) assert.ok(f5.has(f), `day 5 has ${f}`);
+  for (const f of ['spell', 'colour', 'sort', 'where', 'report', 'letter']) assert.ok(f5.has(f), `day 5 has ${f}`);
+  assert.deepEqual(q5.filter((x) => x.type === 'letter').map((x) => x.letter).sort(), [...'abcdef']);
+  assert.ok(!q5.some((x) => x.type === 'dinner') && !q4.some((x) => x.type === 'letter'));
   assert.equal(q5.find((x) => x.type === 'report').passage, 0);
   assert.ok(!q4.some((x) => x.type === 'report'));
   st = await load();
@@ -257,6 +276,11 @@ const shots = process.argv[2];
   assert.ok(!q6.some((x) => x.type === 'kitintro' || x.type === 'whereintro'));
   assert.equal(q6.filter((x) => x.type === 'colour').length, 6);
   assert.equal(q6.find((x) => x.type === 'report').passage, 1, 'another text on the next day');
+  assert.deepEqual(q6.filter((x) => x.type === 'letter').map((x) => x.letter).sort(), [...'ghijkl']);
+  assert.equal(q6.filter((x) => x.type === 'dinner').length, 3);
+  const f6 = await playMatch();
+  assert.ok(f6.has('dinner') && f6.has('letter'));
+  await shot('42-career-day6');
 
   assert.deepEqual(errors, []);
   await browser.close();

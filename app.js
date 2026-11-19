@@ -373,7 +373,7 @@
         day: t,
         queue: E.buildSession({
           words: C.words, foils: C.foils, cards: state.cards, today: t, dayNum: dayNum(t), speech: Voice.ok,
-          kit: C.kit, kitIntro: !state.kitSeen, report: C.report,
+          kit: C.kit, kitIntro: !state.kitSeen, report: C.report, dinner: C.dinner, letters: C.letters,
         }),
         pos: 0, points: 0, combo: 0, bestCombo: 0, right: 0, total: 0,
         promoted: [], dropped: [], ms: 0,
@@ -416,7 +416,7 @@
     }
     if (s.pos >= s.queue.length) return fullTime();
     const item = s.queue[s.pos];
-    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout, kitintro, colour, sort, whereintro, where, report })[item.type](item);
+    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout, kitintro, colour, sort, whereintro, where, report, dinner, letter })[item.type](item);
   }
   function next() { clock(); state.session.pos++; save(); play(); }
 
@@ -450,7 +450,7 @@
     clock();
     save();
 
-    const word = item.wordId ? WORD[item.wordId].en : item.foil || item.colour || item.prep;
+    const word = item.wordId ? WORD[item.wordId].en : item.foil || item.colour || item.prep || (item.type === 'dinner' ? WORD[item.a].en : item.letter);
     const spoken = Voice.say(item.type === 'sentence' ? WORD[item.wordId].sent[0].replace('___', word) : word);
     const moved = res && res.to !== res.from;
     const fb = document.createElement('div');
@@ -766,6 +766,51 @@
       $app.querySelector(`.opt[data-p="${p.en}"]`).classList.add('is-right');
       document.getElementById('wsent').innerHTML = sent(p.en);
       settle(item, ok, `<span class="lbl">${en(p.en)} זה ${p.he}</span><span class="sentence sm" dir="ltr" lang="en">${sent(p.en)}</span>`);
+    });
+  }
+
+  // Team dinner: the cook wants to make a dish, and one of four words is what it needs
+  function dinner(item) {
+    const w = WORD[item.a];
+    const opts = E.shuffle([item.a, ...item.wrong], Math.random).map((id) => WORD[id]);
+    const sent = (inner) => `I want to make ${esc(item.dish)}. I need <b class="gap">${inner}</b>.`;
+    screen(`<section class="play">${hud()}
+      <div class="stage kit-dinner">
+        <p class="kicker">ארוחת הקבוצה: מה חסר לטבח?</p>
+        <div class="emoji sm">🧑‍🍳</div>
+        <p class="sentence" id="dsent" dir="ltr" lang="en" data-dish="${esc(item.dish)}">${sent('&nbsp;')}</p>
+        <div class="opts four" dir="ltr">${opts.map((o) => `<button class="opt word" data-id="${o.id}">${esc(o.en)}</button>`).join('')}</div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.opt', (e) => {
+      const ok = e.currentTarget.dataset.id === w.id;
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`.opt[data-id="${w.id}"]`).classList.add('is-right');
+      document.getElementById('dsent').innerHTML = sent(esc(w.en));
+      settle(item, ok, `<span class="lbl">${w.emoji} ${en(w.en)} זה ${esc(w.he)}</span><span class="sentence sm" dir="ltr" lang="en">${sent(esc(w.en))}</span>`);
+    });
+  }
+
+  // Kit numbers: a capital letter looks for its small one, or the other way round
+  const LOOKALIKE = { b: 'dpq', d: 'bpq', p: 'qbd', q: 'pgd', g: 'qjy', j: 'giy', i: 'ljt', l: 'itj', t: 'fli', f: 'tlk', m: 'nwu', n: 'muh', h: 'nbk', u: 'nvw', v: 'uwy', w: 'vmu', y: 'vgj', a: 'eoc', e: 'aco', o: 'ace', c: 'oes', s: 'czx', z: 'sxk', x: 'kzs', k: 'xhf', r: 'nfc' };
+  function letter(item) {
+    const l = item.letter;
+    const show = (x) => (item.rev ? x.toUpperCase() : x); // the options: small letters, or capitals when the cue is small
+    const cue = item.rev ? l : l.toUpperCase();
+    const opts = E.shuffle([l, ...LOOKALIKE[l]], Math.random);
+    screen(`<section class="play">${hud()}
+      <div class="stage kit-letter">
+        <p class="kicker">מספרי החולצות: ${item.rev ? 'מי האות הגדולה של הקטנה הזאת?' : 'מי האות הקטנה של הגדולה הזאת?'}</p>
+        <div class="pair" dir="ltr"><b id="lcue">${cue}</b><i id="lgap"></i></div>
+        <div class="opts four" dir="ltr">${opts.map((o) => `<button class="opt blend" data-l="${o}">${show(o)}</button>`).join('')}</div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.opt', (e) => {
+      const ok = e.currentTarget.dataset.l === l;
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`.opt[data-l="${l}"]`).classList.add('is-right');
+      document.getElementById('lgap').textContent = show(l);
+      settle(item, ok, `<span class="lbl">הזוג:</span><span class="spellrow right" dir="ltr">${l.toUpperCase()} ${l}</span>`);
     });
   }
 
