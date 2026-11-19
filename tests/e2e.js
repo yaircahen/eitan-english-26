@@ -1,4 +1,4 @@
-// Plays days 1 to 4 end to end in Chromium with speech stubbed, then opens the coach screen.
+// Plays days 1 to 5 end to end in Chromium with speech stubbed, then opens the coach screen.
 // Run: python3 -m http.server 8765 --bind 127.0.0.1 &   then   node tests/e2e.js [screenshot-dir]
 const { chromium } = require('playwright');
 const assert = require('node:assert');
@@ -35,7 +35,7 @@ const shots = process.argv[2];
   assert.match(await page.textContent('.match'), /11 מילים חדשות/);
   await page.click('#go');
 
-  const bySent = Object.fromEntries(words.map((w) => [w.sent[0].replace('___', '').replace(/\s+/g, ' ').trim(), w]));
+  const bySent = Object.fromEntries(words.filter((w) => w.sent).map((w) => [w.sent[0].replace('___', '').replace(/\s+/g, ' ').trim(), w]));
   const lastSaid = async () => (await page.evaluate(() => window.__said[window.__said.length - 1])).replace(/\.$/, '');
   const seen = new Set();
   const once = async (key, name) => { if (!seen.has(key)) { seen.add(key); await shot(name); } };
@@ -55,6 +55,7 @@ const shots = process.argv[2];
       const kicker = (await page.textContent('.kicker')).trim();
       if (await page.$('#ok')) {
         if (/יריבה חדשה/.test(kicker)) await once('intro', '05-intro');
+        if (/הקריאה/.test(await page.textContent('.stage'))) await once('pintro', '23-phrase-intro');
         if (/יריבה חדשה/.test(kicker) && /ice cream/.test(await page.textContent('#say'))) await shot('21-intro-two-words');
         if (/מחצית/.test(kicker)) await once('half', '08-halftime');
         if (/שריקת הסיום/.test(kicker)) await once('full', '11-fulltime');
@@ -72,9 +73,11 @@ const shots = process.argv[2];
         await page.click(`.opt[data-w="${bySent[text].en}"]`);
       } else if (await page.$('.opt.word')) {
         faces.add('bank'); await once('bank', '17-bank');
+        if (await page.$('.opt.word.long')) await once('pbank', '25-phrase-bank');
         await page.click(`.opt[data-id="${byHe[(await page.textContent('.cue .he')).trim()].id}"]`);
       } else if (await page.$('.opt')) {
         faces.add('recognise'); await once('rec', '06-recognise');
+        if (await page.$('.bigword.long')) await once('prec', '24-phrase-recognise');
         const en = (await page.textContent('#say')).replace('🔊', '').trim();
         await page.click(`.opt[data-id="${words.find((x) => x.en === en).id}"]`);
       } else {
@@ -174,6 +177,23 @@ const shots = process.argv[2];
   assert.ok(day4.every((w) => st.cards[w.id].level === 3), 'day-4 words in the squad after day 4');
   assert.ok(day3.every((w) => st.cards[w.id].level === 4), 'day-3 words at level 4 after day 4');
   await shot('22-career-day4');
+  assert.ok(words.filter((w) => w.phrase).every((w) => !st.cards[w.id].seen), 'the phrases stay closed on day 4');
+
+  // day 5: the ten phrases open, picked among themselves, and squad words take the kicks
+  const phrases = words.filter((w) => w.phrase);
+  assert.equal(phrases.length, 10);
+  assert.equal(new Set(words.map((w) => w.he)).size, words.length);
+  await page.goto(BASE + '?day=2026-11-20');
+  assert.match(await page.textContent('.match'), /10 מילים חדשות/);
+  await page.click('#go');
+  const q5 = (await load()).session.queue;
+  assert.equal(q5.filter((x) => x.type === 'spell').length, 5);
+  assert.ok(q5.every((x) => x.type !== 'spell' || !x.wordId.startsWith('p-')));
+  const f5 = await playMatch();
+  assert.ok(f5.has('spell'));
+  st = await load();
+  assert.ok(phrases.every((w) => st.cards[w.id].level === 3), 'the phrases in the squad after day 5');
+  await shot('26-career-day5');
 
   assert.deepEqual(errors, []);
   await browser.close();

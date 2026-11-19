@@ -500,9 +500,9 @@
       <div class="stage intro-card">
         <p class="kicker">יריבה חדשה עולה למגרש</p>
         <div class="emoji">${w.emoji}</div>
-        <button class="say bigword" id="say" dir="ltr" lang="en">${blendHtml(w)} <span>🔊</span></button>
+        <button class="say bigword ${w.phrase ? 'long' : ''}" id="say" dir="ltr" lang="en">${blendHtml(w)} <span>🔊</span></button>
         <p class="he">${esc(w.he)}</p>
-        <p class="line">המילה ${en(w.en)} ${esc(w.line)}</p>
+        <p class="line">${w.phrase ? 'הקריאה' : 'המילה'} ${en(w.en)} ${esc(w.line)}</p>
         <button class="btn btn-go" id="ok">תופסים אותה</button>
       </div></section>`, 'scr-play');
     bindHud();
@@ -516,8 +516,8 @@
     const opts = E.shuffle([w, ...others(w, 3)], Math.random);
     screen(`<section class="play">${hud()}
       <div class="stage">
-        <p class="kicker">מה המילה הזאת מסתירה?</p>
-        <button class="say bigword" id="say" dir="ltr" lang="en">${esc(w.en)} <span>🔊</span></button>
+        <p class="kicker">${w.phrase ? 'מה הקריאה הזאת אומרת?' : 'מה המילה הזאת מסתירה?'}</p>
+        <button class="say bigword ${w.phrase ? 'long' : ''}" id="say" dir="ltr" lang="en">${esc(w.en)} <span>🔊</span></button>
         <div class="opts">${opts.map((o) => `<button class="opt" data-id="${o.id}"><span class="opt-e">${o.emoji}</span>${esc(o.he)}</button>`).join('')}</div>
       </div></section>`, 'scr-play');
     bindHud();
@@ -534,7 +534,7 @@
   // other words already on the pitch (met, or due today), to stand next to the right one
   function others(w, n) {
     const d = dayNum(state.session.day);
-    return E.shuffle(C.words.filter((x) => x.id !== w.id && x.day <= d), Math.random).slice(0, n);
+    return E.shuffle(C.words.filter((x) => x.id !== w.id && x.day <= d && !x.phrase === !w.phrase), Math.random).slice(0, n);
   }
 
   // Word bank: the picture and the Hebrew, and the word is picked out of a bank of English words
@@ -543,9 +543,9 @@
     const opts = E.shuffle([w, ...others(w, 5)], Math.random);
     screen(`<section class="play">${hud()}
       <div class="stage">
-        <p class="kicker">מחסן המילים: איזו מהן היא?</p>
+        <p class="kicker">${w.phrase ? 'מחסן הקריאות: איזו מהן היא?' : 'מחסן המילים: איזו מהן היא?'}</p>
         <div class="cue"><span class="emoji sm">${w.emoji}</span><span class="he">${esc(w.he)}</span></div>
-        <div class="opts bank" dir="ltr">${opts.map((o) => `<button class="opt word" data-id="${o.id}">${esc(o.en)}</button>`).join('')}</div>
+        <div class="opts bank" dir="ltr">${opts.map((o) => `<button class="opt word ${w.phrase ? 'long' : ''}" data-id="${o.id}">${esc(o.en)}</button>`).join('')}</div>
       </div></section>`, 'scr-play');
     bindHud();
     on('.opt', (e) => {

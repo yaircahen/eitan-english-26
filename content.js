@@ -1,5 +1,5 @@
 /* Content for Eitan's game. Word lists are the teacher's (prd.md §4.2).
-   Days 1 to 4: the 11 ch words, the 12 sh words, and 8 + 12 + 18 food words. The phrases are not in yet.
+   Days 1 to 4: the 11 ch words, the 12 sh words, and 8 + 12 + 18 food words. Day 5: the ten phrases.
    `sent` is a sentence of ours with the word missing, and three words that do not fit it. */
 window.CONTENT = {
   startDate: '2026-11-16', // day 1
@@ -107,6 +107,17 @@ window.CONTENT = {
     { id: 'make', en: 'make', he: 'להכין', emoji: '🧑‍🍳', day: 4, line: 'מכינה תוכנית בריחה. התוכנית עוד לא מוכנה.', sent: ['I ___ a salad with tomatoes and carrots.', ['drink', 'short', 'school']] },
     { id: 'need', en: 'need', he: 'צריך', emoji: '❗', day: 4, line: 'צריכה רק דבר אחד: שלא יסתכלו עליה.', sent: ['I want to make a cake. I ___ eggs and milk.', ['short', 'chair', 'hungry']] },
     { id: 'shoppinglist', en: 'shopping list', he: 'רשימת קניות', emoji: '📝', blend: 'sh', day: 4, line: 'רשמה לעצמה איך לברוח, ושכחה את הרשימה בבית.', sent: ['Mum writes a ___ and goes to the shop.', ['milkshake', 'spinach', 'restaurant']] },
+    // day 5: the phrases (prd.md §4.3). `phrase` cards are read and picked among themselves, never typed, and have no sentence.
+    { id: 'p-like', en: 'I like…', he: 'אני אוהב…', emoji: '😍', phrase: true, day: 5, line: 'מחפשת משהו לאהוב. שלוש הנקודות מחכות למאכל.' },
+    { id: 'p-dontlike', en: "I don't like…", he: 'אני לא אוהב…', emoji: '🙅', phrase: true, day: 5, line: 'מעקמת את האף עוד לפני שהגישו לה.' },
+    { id: 'p-want', en: 'I want…', he: 'אני רוצה…', emoji: '🙋', phrase: true, day: 5, line: 'מושיטה ידיים לכל מגש שעובר.' },
+    { id: 'p-need', en: 'I need…', he: 'אני צריך…', emoji: '☝️', phrase: true, day: 5, line: 'בטוחה שבלי המילה הבאה היא לא שורדת את המחצית.' },
+    { id: 'p-hungry', en: "I'm hungry", he: 'אני רעב', emoji: '🤤', phrase: true, day: 5, line: 'נשמעת מהיציע כבר מהדקה הראשונה.' },
+    { id: 'p-doyou', en: 'Do you like…?', he: 'אתה אוהב…?', emoji: '🤔', phrase: true, day: 5, line: 'שואלת את כולם שאלות כדי להרוויח זמן.' },
+    { id: 'p-yes', en: 'Yes, I do', he: 'כן, אני אוהב', emoji: '✅', phrase: true, day: 5, line: 'מהנהנת בלי הפסקה, גם כשלא שאלו אותה.' },
+    { id: 'p-no', en: "No, I don't", he: 'לא, אני לא אוהב', emoji: '❌', phrase: true, day: 5, line: 'מנענעת את הראש ומסרבת לרדת מהספסל.' },
+    { id: 'p-eat', en: 'What do you want to eat?', he: 'מה אתה רוצה לאכול?', emoji: '🍴', phrase: true, day: 5, line: 'מסתובבת עם תפריט ומבלבלת את ההגנה.' },
+    { id: 'p-drink', en: 'What do you want to drink?', he: 'מה אתה רוצה לשתות?', emoji: '🥤', phrase: true, day: 5, line: 'מחלקת כוסות ליד הקו במקום לשחק.' },
   ],
 
   /* The table. Clubs of ours: a football word every child knows, and a word from the test.

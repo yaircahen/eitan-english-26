@@ -143,7 +143,12 @@
     if (!late) q.push(...sentences);
     for (const w of shuffle(fresh, rng)) q.push({ type: w.blend ? 'missing' : 'bank', wordId: w.id, phase: 'second' });
     if (late) q.push(...warm, ...sentences);
+    // every match ends with typed kicks: when the new entries cannot be typed (phrases), squad words step up
     const kickers = shuffle(fresh.filter(kickable), rng);
+    if (kickers.length < KICKS) {
+      const squad = shuffle(warm.map((x) => words.find((w) => w.id === x.wordId)).filter(kickable), rng);
+      kickers.push(...squad.slice(0, KICKS - kickers.length));
+    }
     if (kickers.length) q.push({ type: 'shootout' });
     for (const w of kickers) q.push({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' });
     return q;

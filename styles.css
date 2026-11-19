@@ -175,6 +175,8 @@ h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 900; line-height: 1.1; 
 .cue { display: flex; align-items: center; gap: 14px; }
 .bigword { font: 900 clamp(2.6rem, 8vw, 4.2rem) var(--font-en); letter-spacing: .03em; padding: 4px 18px; }
 .bigword span { font-size: .5em; vertical-align: middle; }
+.bigword.long { font-size: clamp(1.7rem, 4.6vw, 2.8rem); letter-spacing: 0; }
+.opt.word.long { font-size: 1.25rem; letter-spacing: 0; }
 .bigword mark { background: none; color: var(--gold); text-decoration: underline 5px; text-underline-offset: 8px; }
 .whistle-btn { width: 150px; height: 150px; background: var(--gold); color: var(--night); font-size: 3.6rem; display: flex; flex-direction: column; align-items: center; justify-content: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
 .whistle-btn span { font-size: .9rem; font-weight: 800; }

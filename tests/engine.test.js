@@ -207,3 +207,15 @@ test('words that are not letters only are never typed whole', () => {
   assert.equal(q.length, 2);
   assert.ok(!q.some((x) => x.type === 'spell' || x.type === 'shootout'));
 });
+
+test('phrases cannot be typed, so squad words take the kicks', () => {
+  const ws = words.concat([{ id: 'p-yes', en: 'Yes, I do', phrase: true, day: 2 }]);
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  for (const w of ws.filter((x) => x.day === 1)) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  cards.sheep.seen = true;
+  const q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  const kicks = q.filter((x) => x.type === 'spell');
+  assert.equal(kicks.length, 5);
+  assert.ok(kicks.every((x) => x.wordId !== 'p-yes' && x.set));
+  assert.deepEqual(q.filter((x) => x.wordId === 'p-yes').map((x) => x.type), ['intro', 'recognise', 'bank', 'bank']);
+});

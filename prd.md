@@ -245,8 +245,8 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | 1 | Mon 16 | the 11 `ch` words, jersey, idol, letters 1 | ~10 min, light first night |
 | 2 | Tue 17 | the 12 `sh` words, 8 food words, letters 2 | up to 25 min |
 | 3 | Wed 18 | 12 food words (lemon, tomatoes, cookie, oranges, juice, salad, meat, hamburger, jam, carrots, tea, coffee), colours, prepositions, letters 3 | up to 30 min. Split decided 17 Nov: 31 reviews are already due, so fewer new words |
-| 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), phrases, letters 4–5 | up to 25 min. New words in the first half, review in the second |
-| 5 | Fri 20 | none, review and the reading passage | short |
+| 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), letters 4–5 | up to 25 min. New words in the first half, review in the second |
+| 5 | Fri 20 | the ten phrases (moved from day 4 by the owner, 19 Nov), review and the reading passage | |
 | 6 | Sat 21 | none, review | short |
 | 7 | Sun 22 | none, review, the first test-shaped mock | |
 | 8 | Mon 23 | none. **Target day: every word at level 5** | second mock |
@@ -256,7 +256,7 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 ## 11. Open questions
 
 1. ~~Is there audio in the real test?~~ Answered by the teacher's letter of 16 Nov: she says the word aloud and the children write the blend.
-2. Which colours appear in exercise 3, and which foods map to them?
+2. ~~Which colours appear in exercise 3?~~ Answered by the owner, 19 Nov: red, blue, green, yellow, orange, brown, black, white, purple, grey. Which foods map to each is still to settle when the Kit room is built.
 3. The current Barcelona first-team list. To be taken from a public source at build time and confirmed by the owner. Not guessed.
 4. ~~Which fictional clubs for the table?~~ Decided 17 Nov: a football word every child knows (Maccabi, Hapoel, Beitar, Inter, United, City, FC) plus a test word, and Real Madrid. The list is in `content.js`.
 5. ~~Parent PIN.~~ Decided 17 Nov: as in Gilad's game, chosen on the first open of the coach screen.
