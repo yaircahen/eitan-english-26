@@ -120,6 +120,7 @@ Session-based, not calendar-based. Five levels:
 - **Leech rule:** four misses on a word makes it a "tricky" word, which gets a picture cue, a Hebrew memory line, and a mention on the parent screen.
 - **Strict marking:** spellings are exact. A wrong letter is shown in place so a miss teaches.
 - **Spelling is for the shoot-out only (decided 17 Nov).** The test asks the children to read, translate, pick a word from a bank and fill in a missing blend, never to write a whole word from memory. So levels climb only on those faces. Full spelling is the penalty shoot-out at the end of every match: points and combo, no box move.
+- **A long review waits (built 19 Nov).** On a day with new words and more than 20 words due, the new words open the match and the review follows half-time. Entries that are not one plain word (*ice cream*, *don't like*, *shopping list*) are read and picked, never typed whole in the shoot-out.
 - **New-word schedule (target):** day 1 about 10, days 2 and 3 about 20 each, day 4 about 10, none after day 4. A simulation of these rules (about 12 s per interaction, 85% accuracy on fresh items, 75–85% later) gives 91–97% mastery by Mon 23 Nov for this schedule. The build verifies the model against the real engine.
 
 ### 6.2 Card types

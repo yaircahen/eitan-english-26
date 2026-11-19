@@ -81,6 +81,9 @@
   }
   const SET_SIZE = 6; // sentences in the day's Sentence fill
   const KICKS = 5;    // shoot-out kicks on a day with no new words
+  const LATE_REVIEW = 20; // with new words and more than this many due, the new words go first and the review follows half-time
+  // The shoot-out keyboard has letters only: "ice cream" and "don't like" are never typed whole.
+  const kickable = (w) => /^[a-z]+$/.test(w.en);
 
   /* Seen words worth a turn today, highest level first, shuffled inside a level. */
   function dueWords(words, cards, today, rng) {
@@ -102,20 +105,22 @@
   /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
      Items marked `set` (Sentence fill, the shoot-out) never move a box. */
   function buildSession({ words, foils = [], cards, today, dayNum, speech, rng = Math.random }) {
-    const q = [];
-    for (const w of dueWords(words, cards, today, rng)) {
-      q.push({ type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' });
-    }
+    const warm = dueWords(words, cards, today, rng).map((w) => (
+      { type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' }));
 
     const fresh = words.filter((w) => !(cards[w.id] && cards[w.id].seen) && w.day <= dayNum);
     // Sentence fill (a test-shaped set, never moves a box): words already in the squad, in a sentence.
     const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
       .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
     if (!fresh.length) {
-      if (!q.length) return q;
-      const kickers = shuffle(q.map((x) => words.find((w) => w.id === x.wordId)), rng).slice(0, KICKS);
-      return q.concat(sentences, [{ type: 'shootout' }], kickers.map((w) => ({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' })));
+      if (!warm.length) return [];
+      const kickers = shuffle(warm.map((x) => words.find((w) => w.id === x.wordId)).filter(kickable), rng).slice(0, KICKS);
+      return warm.concat(sentences, kickers.length ? [{ type: 'shootout' }] : [],
+        kickers.map((w) => ({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' })));
     }
+    // A long review would push the new words too late in the evening: they go first, and the review follows half-time.
+    const late = warm.length > LATE_REVIEW;
+    const q = late ? [] : warm.slice();
 
     // sh words by ear only are needed while no sh word is on the pitch; after that the whistle has both sides
     const mixed = words.some((w) => w.blend === 'sh' && w.day <= dayNum);
@@ -135,10 +140,12 @@
     }
 
     q.push({ type: 'halftime' });
-    q.push(...sentences);
+    if (!late) q.push(...sentences);
     for (const w of shuffle(fresh, rng)) q.push({ type: w.blend ? 'missing' : 'bank', wordId: w.id, phase: 'second' });
-    q.push({ type: 'shootout' });
-    for (const w of shuffle(fresh, rng)) q.push({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' });
+    if (late) q.push(...warm, ...sentences);
+    const kickers = shuffle(fresh.filter(kickable), rng);
+    if (kickers.length) q.push({ type: 'shootout' });
+    for (const w of kickers) q.push({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' });
     return q;
   }
 

@@ -181,3 +181,29 @@ test('spelling is only in the shoot-out, marked as a set, and squad words get te
   assert.ok(q.slice(0, so).every((x) => ['recognise', 'bank', 'missing', 'whistle', 'sentence'].includes(x.type)));
   assert.ok(!q.some((x) => x.wordId === 'school' && x.type === 'whistle'));
 });
+
+test('a long review waits for half-time when there are new words; a short one still opens the match', () => {
+  const old = Array.from({ length: 21 }, (_, i) => ({ id: `w${i}`, en: `w${'abcdefghijklmnopqrstu'[i]}`, day: 1 }));
+  const ws = old.concat([{ id: 'eat', en: 'eat', day: 2 }]);
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  for (const w of old) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  let q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  const half = q.findIndex((x) => x.type === 'halftime');
+  assert.equal(q[0].type, 'intro');
+  assert.equal(q.filter((x) => x.phase === 'warmup').length, 21);
+  assert.ok(q.every((x, i) => x.phase !== 'warmup' || (i > half && i < q.findIndex((y) => y.type === 'shootout'))));
+  cards.w0.l3Day = D2; // 20 due: a normal warm-up
+  q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  assert.equal(q[0].phase, 'warmup');
+});
+
+test('words that are not letters only are never typed whole', () => {
+  const ws = [{ id: 'icecream', en: 'ice cream', day: 1 }, { id: 'dontlike', en: "don't like", day: 1 }];
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  let q = E.buildSession({ words: ws, cards, today: D1, dayNum: 1, speech: true });
+  assert.ok(!q.some((x) => x.type === 'spell' || x.type === 'shootout'));
+  for (const w of ws) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  q = E.buildSession({ words: ws, cards, today: D2, dayNum: 1, speech: true });
+  assert.equal(q.length, 2);
+  assert.ok(!q.some((x) => x.type === 'spell' || x.type === 'shootout'));
+});

@@ -1,4 +1,4 @@
-// Plays days 1 and 2 end to end in Chromium with speech stubbed, then opens the coach screen.
+// Plays days 1 to 4 end to end in Chromium with speech stubbed, then opens the coach screen.
 // Run: python3 -m http.server 8765 --bind 127.0.0.1 &   then   node tests/e2e.js [screenshot-dir]
 const { chromium } = require('playwright');
 const assert = require('node:assert');
@@ -55,6 +55,7 @@ const shots = process.argv[2];
       const kicker = (await page.textContent('.kicker')).trim();
       if (await page.$('#ok')) {
         if (/יריבה חדשה/.test(kicker)) await once('intro', '05-intro');
+        if (/יריבה חדשה/.test(kicker) && /ice cream/.test(await page.textContent('#say'))) await shot('21-intro-two-words');
         if (/מחצית/.test(kicker)) await once('half', '08-halftime');
         if (/שריקת הסיום/.test(kicker)) await once('full', '11-fulltime');
         await page.click('#ok'); continue;
@@ -75,7 +76,7 @@ const shots = process.argv[2];
       } else if (await page.$('.opt')) {
         faces.add('recognise'); await once('rec', '06-recognise');
         const en = (await page.textContent('#say')).replace('🔊', '').trim();
-        await page.click(`.opt[data-id="${en}"]`);
+        await page.click(`.opt[data-id="${words.find((x) => x.en === en).id}"]`);
       } else {
         const w = byHe[(await page.textContent('.cue .he')).trim()];
         const pre = (await page.textContent('#typed span:first-child'));
@@ -151,6 +152,28 @@ const shots = process.argv[2];
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto(BASE + '?day=2026-11-18'); await shot('14-portrait-career');
   await page.click('#go'); await shot('15-portrait-spell');
+
+  // days 3 and 4 to the final whistle. Day 4: 18 new words, a long review that waits for half-time, two-word entries never typed whole
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const day3 = words.filter((w) => w.day === 3), day4 = words.filter((w) => w.day === 4);
+  await playMatch();
+  st = await load();
+  assert.ok(day3.every((w) => st.cards[w.id].level === 3), 'day-3 words in the squad after day 3');
+  await page.goto(BASE + '?day=2026-11-19');
+  assert.equal(day4.length, 18);
+  assert.match(await page.textContent('.match'), /18 מילים חדשות/);
+  await page.click('#go');
+  const q4 = (await load()).session.queue;
+  assert.equal(q4[0].type, 'intro', 'a long review does not open day 4');
+  const half = q4.findIndex((x) => x.type === 'halftime');
+  assert.ok(q4.every((x, i) => x.phase !== 'warmup' || i > half), 'the review follows half-time');
+  assert.ok(q4.filter((x) => x.phase === 'warmup').length > 20);
+  assert.ok(!q4.some((x) => x.type === 'spell' && ['icecream', 'dontlike', 'shoppinglist'].includes(x.wordId)));
+  await playMatch();
+  st = await load();
+  assert.ok(day4.every((w) => st.cards[w.id].level === 3), 'day-4 words in the squad after day 4');
+  assert.ok(day3.every((w) => st.cards[w.id].level === 4), 'day-3 words at level 4 after day 4');
+  await shot('22-career-day4');
 
   assert.deepEqual(errors, []);
   await browser.close();
