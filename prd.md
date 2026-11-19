@@ -77,17 +77,19 @@ I like… · I don't like… · I want… · I need… · I'm hungry · Do you l
 ### 4.4 Small sets
 
 - **Prepositions:** in, on, under, near.
-- **Colours** (written): yellow, brown, red are certain. Candidates to confirm: green, orange, white, black, blue. See §11.
+- **Colours** (written): red, blue, green, yellow, orange, brown, black, white, purple, grey (owner, 19 Nov).
 - **Letter pairs Aa–Zz:** 26 pairs, in sets of about six.
 - **His name:** Eitan.
 
-### 4.5 Foods for the colour sort (candidates, owner to confirm)
+### 4.5 Foods for the colour sort
 
-Only the clear cases go in the sort pool: red: tomatoes, apples · yellow: bananas, lemon, cheese, chips · brown: chocolate, bread, cookie. Peppers and the rest are not used until the colours on the real test are known.
+Only the clear cases go in the sort pool: red: tomatoes, apples · yellow: bananas, lemon, cheese, chips · brown: chocolate, bread, cookie · orange: oranges, carrots · green: spinach, salad · white: milk, eggs. Blue, black, purple and grey have no food in the list: they are practised as colour words only (built 19 Nov). Peppers, coffee, jam and the rest are left out as unclear.
 
 ### 4.6 The reading passage
 
 Original text of about 8–10 short sentences, using only test words, with 3 yes/no items and 3 one-word completions. Written at build time and reviewed by the owner. Not derived from the worksheet.
+
+Built 19 Nov: three texts of ours (*At school*, *In the kitchen*, *At the restaurant*), nine short sentences each, one a day in turn from day 5. The answers are picked, not typed. After a miss the sentence that holds the answer lights up. Owner review of the texts is pending.
 
 ## 5. Constraints and assumptions
 
@@ -120,6 +122,7 @@ Session-based, not calendar-based. Five levels:
 - **Leech rule:** four misses on a word makes it a "tricky" word, which gets a picture cue, a Hebrew memory line, and a mention on the parent screen.
 - **Strict marking:** spellings are exact. A wrong letter is shown in place so a miss teaches.
 - **Spelling is for the shoot-out only (decided 17 Nov).** The test asks the children to read, translate, pick a word from a bank and fill in a missing blend, never to write a whole word from memory. So levels climb only on those faces. Full spelling is the penalty shoot-out at the end of every match: points and combo, no box move.
+- **A long review waits (built 19 Nov).** On a day with new words and more than 20 words due, the new words open the match and the review follows half-time. Entries that are not one plain word (*ice cream*, *don't like*, *shopping list*) are read and picked, never typed whole in the shoot-out.
 - **New-word schedule (target):** day 1 about 10, days 2 and 3 about 20 each, day 4 about 10, none after day 4. A simulation of these rules (about 12 s per interaction, 85% accuracy on fresh items, 75–85% later) gives 91–97% mastery by Mon 23 Nov for this schedule. The build verifies the model against the real engine.
 
 ### 6.2 Card types
@@ -244,9 +247,9 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | 1 | Mon 16 | the 11 `ch` words, jersey, idol, letters 1 | ~10 min, light first night |
 | 2 | Tue 17 | the 12 `sh` words, 8 food words, letters 2 | up to 25 min |
 | 3 | Wed 18 | 12 food words (lemon, tomatoes, cookie, oranges, juice, salad, meat, hamburger, jam, carrots, tea, coffee), colours, prepositions, letters 3 | up to 30 min. Split decided 17 Nov: 31 reviews are already due, so fewer new words |
-| 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), phrases, letters 4–5 | up to 25 min. New words in the first half, review in the second |
-| 5 | Fri 20 | none, review and the reading passage | short |
-| 6 | Sat 21 | none, review | short |
+| 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), letters 4–5 | up to 25 min. New words in the first half, review in the second |
+| 5 | Fri 20 | the ten phrases (moved from day 4 by the owner, 19 Nov), the Kit room opens (colours, colour sort, in / on / under / near), review and the reading passage | |
+| 6 | Sat 21 | none, review. Team dinner opens (built 19 Nov). Kit numbers run from day 5: Aa–Ff, Gg–Ll, Mm–Rr, Ss–Zz, then eight mixed pairs a day | |
 | 7 | Sun 22 | none, review, the first test-shaped mock | |
 | 8 | Mon 23 | none. **Target day: every word at level 5** | second mock |
 | 9 | Tue 24 | none. Buffer and the **Clásico** mock | |
@@ -255,7 +258,7 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 ## 11. Open questions
 
 1. ~~Is there audio in the real test?~~ Answered by the teacher's letter of 16 Nov: she says the word aloud and the children write the blend.
-2. Which colours appear in exercise 3, and which foods map to them?
+2. ~~Which colours appear in exercise 3?~~ Answered by the owner, 19 Nov: red, blue, green, yellow, orange, brown, black, white, purple, grey. Which foods map to each is still to settle when the Kit room is built.
 3. The current Barcelona first-team list. To be taken from a public source at build time and confirmed by the owner. Not guessed.
 4. ~~Which fictional clubs for the table?~~ Decided 17 Nov: a football word every child knows (Maccabi, Hapoel, Beitar, Inter, United, City, FC) plus a test word, and Real Madrid. The list is in `content.js`.
 5. ~~Parent PIN.~~ Decided 17 Nov: as in Gilad's game, chosen on the first open of the coach screen.

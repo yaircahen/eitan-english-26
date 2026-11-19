@@ -175,6 +175,8 @@ h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 900; line-height: 1.1; 
 .cue { display: flex; align-items: center; gap: 14px; }
 .bigword { font: 900 clamp(2.6rem, 8vw, 4.2rem) var(--font-en); letter-spacing: .03em; padding: 4px 18px; }
 .bigword span { font-size: .5em; vertical-align: middle; }
+.bigword.long { font-size: clamp(1.7rem, 4.6vw, 2.8rem); letter-spacing: 0; }
+.opt.word.long { font-size: 1.25rem; letter-spacing: 0; }
 .bigword mark { background: none; color: var(--gold); text-decoration: underline 5px; text-underline-offset: 8px; }
 .whistle-btn { width: 150px; height: 150px; background: var(--gold); color: var(--night); font-size: 3.6rem; display: flex; flex-direction: column; align-items: center; justify-content: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
 .whistle-btn span { font-size: .9rem; font-weight: 800; }
@@ -300,3 +302,68 @@ h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 900; line-height: 1.1; 
   .opt.word { font-size: 1.35rem; }
 }
 @media (prefers-reduced-motion: reduce) { .glow, .typed .caret, .pcard-back, .pcard.open .pcard-face { animation: none; } }
+
+/* the Kit room: shirts on hangers, shelves, and the ball by the box */
+.h-sm { font-size: 1.9rem; margin: 0; }
+.shirt { display: block; width: 84px; height: 78px; filter: drop-shadow(0 0 1.5px #0a1a3f) drop-shadow(0 0 1.5px #0a1a3f); }
+.shirt::before { content: ""; display: block; width: 100%; height: 100%; background: var(--c);
+  clip-path: polygon(30% 0, 40% 9%, 60% 9%, 70% 0, 100% 16%, 90% 40%, 78% 34%, 78% 100%, 22% 100%, 22% 34%, 10% 40%, 0 16%); }
+.shirt.big { width: 150px; height: 140px; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff); }
+.shirt.sm { width: 40px; height: 37px; display: inline-block; vertical-align: middle; filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff); }
+.rack { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 760px; }
+.rack.preps { grid-template-columns: repeat(4, 1fr); }
+.hanger { background: #f4f6fb; color: var(--night); padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; border-top: 6px solid var(--garnet); }
+.hanger b { font: 900 1.45rem var(--font-en); }
+.hanger span:not(.scene) { font-weight: 700; font-size: .95rem; color: #46527a; }
+.hanger .shirt { width: 62px; height: 58px; }
+.opts.four { grid-template-columns: repeat(4, 1fr); }
+.kit-colour .opts.four .opt { min-height: 130px; border-inline-start: 0; border-top: 8px solid var(--blue); }
+.shelves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 820px; }
+.shelf { background: #f4f6fb; color: var(--night); min-height: 190px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 10px; border-bottom: 10px solid var(--garnet); }
+.shelf b { font: 900 2rem var(--font-en); }
+.shelf .on { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.shelf .chip { background: var(--night); color: #fff; padding: 4px 12px; font-weight: 800; }
+.shelf .chip.moved { background: var(--garnet); }
+.shelf.is-wrong { background: #5b6788; color: #dfe5f5; }
+.shelf.lit { border-bottom-color: var(--c); box-shadow: inset 0 12px 0 var(--c); }
+.kit-sort #food { min-height: 1.3em; }
+.kit-sort .note { min-height: 1.4em; margin: 0; color: var(--dim); font-weight: 700; }
+.fbrow { display: flex; align-items: center; gap: 10px; }
+.scene { position: relative; display: block; width: 150px; height: 120px; }
+.scene .box { position: absolute; left: 30px; top: 38px; width: 70px; height: 50px; border: 6px solid #b9814a; border-top-width: 6px; background: rgba(185, 129, 74, .25); }
+.scene .box::before, .scene .box::after { content: ""; position: absolute; top: 100%; width: 6px; height: 28px; background: #b9814a; margin-top: 6px; }
+.scene .box::before { left: -6px; } .scene .box::after { right: -6px; }
+.scene .ball { position: absolute; font-style: normal; font-size: 30px; line-height: 1; }
+.scene.pos-in .ball { left: 50px; top: 52px; }
+.scene.pos-on .ball { left: 50px; top: 8px; }
+.scene.pos-under .ball { left: 50px; top: 92px; }
+.scene.pos-near .ball { left: 116px; top: 92px; }
+.scene.big { transform: scale(1.5); margin: 34px 0 30px; }
+@media (max-width: 640px) {
+  .rack { grid-template-columns: repeat(3, 1fr); }
+  .rack.preps, .opts.four { grid-template-columns: 1fr 1fr; }
+  .shelf b { font-size: 1.5rem; }
+}
+
+/* the Match report: a newspaper clipping on the dressing-room wall */
+.stage.report { gap: 8px; padding-top: 14px; }
+.paper { background: #f4f6fb; color: var(--night); width: 100%; max-width: 860px; padding: 12px 20px 14px; text-align: left; border-top: 8px solid var(--garnet); }
+.paper h2 { margin: 0 0 4px; font: 900 1.5rem var(--font-en); letter-spacing: .02em; text-transform: uppercase; border-bottom: 3px double var(--night); padding-bottom: 4px; }
+.paper p { margin: 0; font: 700 1.3rem/1.7 var(--font-en); }
+.sen { padding: 2px 3px; }
+.sen.lit { background: var(--gold); }
+.qno { margin: 6px 0 0; color: var(--dim); font-weight: 700; font-size: .95rem; }
+.report .sentence.sm { min-height: 1.6em; font-size: 1.7rem; }
+.report .opts { margin-top: 0; }
+.report .opt { min-height: 68px; padding: 10px; }
+.opts.two { grid-template-columns: 1fr 1fr; max-width: 480px; }
+.opts.one { grid-template-columns: 1fr; justify-items: center; }
+.report .note { margin: 0; min-height: 2.2em; }
+@media (max-width: 640px) { .paper p { font-size: 1.1rem; } }
+
+/* Kit numbers: the pair on the back of a shirt */
+.pair { display: flex; gap: 14px; align-items: center; justify-content: center; background: var(--stripes); padding: 14px 34px; clip-path: polygon(12% 0, 88% 0, 100% 18%, 94% 100%, 6% 100%, 0 18%); min-width: 300px; }
+.pair b, .pair i { font: 900 6rem/1.1 var(--font-en); font-style: normal; color: var(--gold); min-width: 1.1em; text-align: center; text-shadow: 0 3px 0 rgba(0, 0, 0, .35); }
+.pair i:empty { border-bottom: 8px solid var(--gold); height: 1.1em; }
+.kit-letter .opt.blend { text-transform: none; }
+.kit-dinner .sentence { font-size: clamp(1.5rem, 4vw, 2.2rem); }

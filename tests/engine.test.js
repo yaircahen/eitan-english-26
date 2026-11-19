@@ -181,3 +181,96 @@ test('spelling is only in the shoot-out, marked as a set, and squad words get te
   assert.ok(q.slice(0, so).every((x) => ['recognise', 'bank', 'missing', 'whistle', 'sentence'].includes(x.type)));
   assert.ok(!q.some((x) => x.wordId === 'school' && x.type === 'whistle'));
 });
+
+test('a long review waits for half-time when there are new words; a short one still opens the match', () => {
+  const old = Array.from({ length: 21 }, (_, i) => ({ id: `w${i}`, en: `w${'abcdefghijklmnopqrstu'[i]}`, day: 1 }));
+  const ws = old.concat([{ id: 'eat', en: 'eat', day: 2 }]);
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  for (const w of old) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  let q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  const half = q.findIndex((x) => x.type === 'halftime');
+  assert.equal(q[0].type, 'intro');
+  assert.equal(q.filter((x) => x.phase === 'warmup').length, 21);
+  assert.ok(q.every((x, i) => x.phase !== 'warmup' || (i > half && i < q.findIndex((y) => y.type === 'shootout'))));
+  cards.w0.l3Day = D2; // 20 due: a normal warm-up
+  q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  assert.equal(q[0].phase, 'warmup');
+});
+
+test('words that are not letters only are never typed whole', () => {
+  const ws = [{ id: 'icecream', en: 'ice cream', day: 1 }, { id: 'dontlike', en: "don't like", day: 1 }];
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  let q = E.buildSession({ words: ws, cards, today: D1, dayNum: 1, speech: true });
+  assert.ok(!q.some((x) => x.type === 'spell' || x.type === 'shootout'));
+  for (const w of ws) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  q = E.buildSession({ words: ws, cards, today: D2, dayNum: 1, speech: true });
+  assert.equal(q.length, 2);
+  assert.ok(!q.some((x) => x.type === 'spell' || x.type === 'shootout'));
+});
+
+test('phrases cannot be typed, so squad words take the kicks', () => {
+  const ws = words.concat([{ id: 'p-yes', en: 'Yes, I do', phrase: true, day: 2 }]);
+  const cards = Object.fromEntries(ws.map((w) => [w.id, E.newCard()]));
+  for (const w of ws.filter((x) => x.day === 1)) Object.assign(cards[w.id], { seen: true, level: 3, l3Day: D1 });
+  cards.sheep.seen = true;
+  const q = E.buildSession({ words: ws, cards, today: D2, dayNum: 2, speech: true });
+  const kicks = q.filter((x) => x.type === 'spell');
+  assert.equal(kicks.length, 5);
+  assert.ok(kicks.every((x) => x.wordId !== 'p-yes' && x.set));
+  assert.deepEqual(q.filter((x) => x.wordId === 'p-yes').map((x) => x.type), ['intro', 'recognise', 'bank', 'bank']);
+});
+
+test('the Kit room: opens on its day, sets only, three shelves of two foods he has met', () => {
+  const kit = {
+    from: 2,
+    colours: ['red', 'blue', 'green', 'yellow', 'orange', 'brown', 'black', 'white'].map((en) => ({ en })),
+    sort: { red: ['chicken', 'chips'], yellow: ['chair', 'cheese'], brown: ['kitchen', 'school', 'sheep'], white: ['sheep', 'nope'] },
+    preps: ['in', 'on', 'under', 'near'].map((en) => ({ en })),
+  };
+  const cards = cardsFor();
+  assert.ok(!E.buildSession({ words, cards, today: D1, dayNum: 1, speech: true, kit, kitIntro: true }).some((x) => /colour|sort|where|kit/.test(x.type)));
+  sit(cards, D1, 1, () => true);
+  const q = E.buildSession({ words, cards, today: D2, dayNum: 2, speech: true, kit, kitIntro: true });
+  const of = (t) => q.filter((x) => x.type === t);
+  assert.deepEqual(['kitintro', 'colour', 'sort', 'whereintro', 'where'].map((t) => of(t).length), [1, 6, 1, 1, 4]);
+  assert.ok(q.filter((x) => ['colour', 'sort', 'where'].includes(x.type)).every((x) => x.set));
+  assert.ok(q.indexOf(of('kitintro')[0]) < q.indexOf(of('colour')[0]) && q.indexOf(of('whereintro')[0]) < q.indexOf(of('where')[0]));
+  const s = of('sort')[0];
+  assert.deepEqual(s.cols.slice().sort(), ['brown', 'red', 'yellow'], 'white has only one food he has met');
+  assert.equal(s.foods.length, 6);
+  assert.ok(s.foods.every((f) => kit.sort[f.col].includes(f.id) && cards[f.id].seen));
+  assert.ok(q.indexOf(s) > q.findIndex((x) => x.type === 'halftime'));
+  const again = E.buildSession({ words, cards, today: D2, dayNum: 2, speech: true, kit });
+  assert.ok(!again.some((x) => x.type === 'kitintro' || x.type === 'whereintro'));
+});
+
+test('the Match report: one text a day in turn from its opening day, as a set', () => {
+  const report = { from: 2, passages: [{}, {}, {}] };
+  const cards = cardsFor();
+  sit(cards, D1, 1, () => true);
+  const at = (dayNum) => E.buildSession({ words, cards, today: D2, dayNum, speech: true, report }).filter((x) => x.type === 'report');
+  assert.equal(at(1).length, 0);
+  assert.deepEqual([2, 3, 4, 5].map((d) => at(d)[0].passage), [0, 1, 2, 0]);
+  assert.ok(at(2)[0].set);
+});
+
+test('Kit numbers and Team dinner: the day\'s letter set, then mixed; three dishes with one fitting word', () => {
+  const letters = { from: 2, sets: ['abc', 'def'], mixed: 4 };
+  const dinner = { from: 3, dishes: ['p', 'q', 'r', 's'].map((dish) => ({ dish, need: ['n1', 'n2'], not: ['x1', 'x2', 'x3', 'x4'] })) };
+  const cards = cardsFor();
+  sit(cards, D1, 1, () => true);
+  const at = (dayNum, t) => E.buildSession({ words, cards, today: D2, dayNum, speech: true, letters, dinner }).filter((x) => x.type === t);
+  assert.equal(at(1, 'letter').length, 0);
+  assert.deepEqual(at(2, 'letter').map((x) => x.letter).sort(), ['a', 'b', 'c']);
+  assert.deepEqual(at(3, 'letter').map((x) => x.letter).sort(), ['d', 'e', 'f']);
+  const mixed = at(4, 'letter');
+  assert.equal(mixed.length, 4);
+  assert.equal(new Set(mixed.map((x) => x.letter)).size, 4);
+  assert.ok(mixed.every((x) => x.set && 'abcdef'.includes(x.letter)));
+  assert.ok(at(2, 'letter').some((x) => x.rev) && at(2, 'letter').some((x) => !x.rev));
+  assert.equal(at(2, 'dinner').length, 0);
+  const ds = at(3, 'dinner');
+  assert.equal(ds.length, 3);
+  assert.equal(new Set(ds.map((x) => x.dish)).size, 3);
+  assert.ok(ds.every((x) => x.set && ['n1', 'n2'].includes(x.a) && x.wrong.length === 3 && x.wrong.every((id) => id.startsWith('x'))));
+});
