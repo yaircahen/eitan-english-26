@@ -243,3 +243,13 @@ test('the Kit room: opens on its day, sets only, three shelves of two foods he h
   const again = E.buildSession({ words, cards, today: D2, dayNum: 2, speech: true, kit });
   assert.ok(!again.some((x) => x.type === 'kitintro' || x.type === 'whereintro'));
 });
+
+test('the Match report: one text a day in turn from its opening day, as a set', () => {
+  const report = { from: 2, passages: [{}, {}, {}] };
+  const cards = cardsFor();
+  sit(cards, D1, 1, () => true);
+  const at = (dayNum) => E.buildSession({ words, cards, today: D2, dayNum, speech: true, report }).filter((x) => x.type === 'report');
+  assert.equal(at(1).length, 0);
+  assert.deepEqual([2, 3, 4, 5].map((d) => at(d)[0].passage), [0, 1, 2, 0]);
+  assert.ok(at(2)[0].set);
+});

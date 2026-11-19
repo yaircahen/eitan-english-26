@@ -124,7 +124,7 @@
 
   /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
      Items marked `set` (Sentence fill, the shoot-out) never move a box. */
-  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, rng = Math.random }) {
+  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, rng = Math.random }) {
     const warm = dueWords(words, cards, today, rng).map((w) => (
       { type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' }));
 
@@ -133,6 +133,10 @@
     const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
       .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
     const room = kit && dayNum >= kit.from ? kitItems(kit, cards, kitIntro, rng) : [];
+    // the Match report: one text a day, in turn. A set, like the Kit room.
+    if (report && dayNum >= report.from) {
+      room.push({ type: 'report', passage: (dayNum - report.from) % report.passages.length, set: true, phase: 'second' });
+    }
     if (!fresh.length) {
       if (!warm.length) return [];
       const kickers = shuffle(warm.map((x) => words.find((w) => w.id === x.wordId)).filter(kickable), rng).slice(0, KICKS);

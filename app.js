@@ -373,7 +373,7 @@
         day: t,
         queue: E.buildSession({
           words: C.words, foils: C.foils, cards: state.cards, today: t, dayNum: dayNum(t), speech: Voice.ok,
-          kit: C.kit, kitIntro: !state.kitSeen,
+          kit: C.kit, kitIntro: !state.kitSeen, report: C.report,
         }),
         pos: 0, points: 0, combo: 0, bestCombo: 0, right: 0, total: 0,
         promoted: [], dropped: [], ms: 0,
@@ -416,7 +416,7 @@
     }
     if (s.pos >= s.queue.length) return fullTime();
     const item = s.queue[s.pos];
-    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout, kitintro, colour, sort, whereintro, where })[item.type](item);
+    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout, kitintro, colour, sort, whereintro, where, report })[item.type](item);
   }
   function next() { clock(); state.session.pos++; save(); play(); }
 
@@ -767,6 +767,66 @@
       document.getElementById('wsent').innerHTML = sent(p.en);
       settle(item, ok, `<span class="lbl">${en(p.en)} זה ${p.he}</span><span class="sentence sm" dir="ltr" lang="en">${sent(p.en)}</span>`);
     });
+  }
+
+  // ---------- the Match report: a short text, three yes/no lines and three one-word completions. A set ----------
+  function report(item) {
+    const p = C.report.passages[item.passage];
+    const qs = [...p.yesno.map((x) => Object.assign({ yn: true }, x)), ...p.fill];
+    let i = 0;
+    screen(`<section class="play">${hud()}
+      <div class="stage report">
+        <p class="kicker">דו״ח המשחק: קוראים את הכתבה ועונים. נגיעה במשפט משמיעה אותו</p>
+        <div class="paper" dir="ltr" lang="en"><h2>${esc(p.title)}</h2><p>${p.text.map((t, k) => `<span class="sen" data-k="${k}">${esc(t)}</span>`).join(' ')}</p></div>
+        <p class="qno" id="qno"></p>
+        <p class="sentence sm" id="rq" dir="ltr" lang="en"></p>
+        <div class="opts four" id="ropts" dir="ltr"></div>
+        <p class="note" id="rnote"></p>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.sen', (e) => Voice.say(e.currentTarget.textContent));
+    const gap = (q, inner) => { const parts = q.q.split('___'); return `${esc(parts[0])}<b class="gap">${inner}</b>${esc(parts[1])}`; };
+    const show = () => {
+      const q = qs[i];
+      document.getElementById('qno').textContent = q.yn ? `שורה ${i + 1} מתוך ${qs.length}: נכון לפי הכתבה?` : `שורה ${i + 1} מתוך ${qs.length}: איזו מילה חסרה?`;
+      document.getElementById('rq').innerHTML = q.yn ? esc(q.q) : gap(q, '&nbsp;');
+      const opts = q.yn ? [['yes', 'Yes'], ['no', 'No']] : E.shuffle([q.a, ...q.wrong], Math.random).map((o) => [o, o]);
+      const box = document.getElementById('ropts');
+      box.className = `opts ${q.yn ? 'two' : 'four'}`;
+      box.innerHTML = opts.map(([v, label]) => `<button class="opt word" data-v="${esc(v)}">${esc(label)}</button>`).join('');
+      box.querySelectorAll('.opt').forEach((el) => el.addEventListener('click', pickOne));
+    };
+    function pickOne(e) {
+      if (locked) return;
+      locked = true;
+      const q = qs[i];
+      const right = q.yn ? (q.a ? 'yes' : 'no') : q.a;
+      const ok = e.currentTarget.dataset.v === right;
+      tally(ok); clock(); save();
+      (ok ? Sfx.goal : Sfx.slip)(state.session.combo);
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`#ropts .opt[data-v="${right}"]`).classList.add('is-right');
+      if (!q.yn) document.getElementById('rq').innerHTML = gap(q, esc(q.a));
+      const sen = $app.querySelector(`.sen[data-k="${q.at}"]`);
+      if (!ok) { sen.classList.add('lit'); document.getElementById('rnote').textContent = 'התשובה מתחבאת במשפט המסומן.'; }
+      document.getElementById('pts').textContent = state.session.points;
+      const comboEl = $app.querySelector('.combo b'); if (comboEl) comboEl.textContent = state.session.combo;
+      const go = () => {
+        sen.classList.remove('lit'); document.getElementById('rnote').textContent = '';
+        if (++i < qs.length) { locked = false; return show(); }
+        document.getElementById('qno').textContent = '';
+        document.getElementById('rq').textContent = '';
+        document.getElementById('ropts').innerHTML = '<button class="btn btn-go" id="ok">הכתבה נסגרה. ממשיכים</button>';
+        document.getElementById('ropts').className = 'opts one';
+        on('#ok', () => { Sfx.tap(); next(); });
+      };
+      if (ok) setTimeout(go, 800);
+      else {
+        document.getElementById('rnote').insertAdjacentHTML('beforeend', ' <button class="btn sm" id="rnext">ממשיכים</button>');
+        document.getElementById('rnext').addEventListener('click', go, { once: true });
+      }
+    }
+    show();
   }
 
   function halftime() {

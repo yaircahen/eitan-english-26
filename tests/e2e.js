@@ -23,6 +23,9 @@ const shots = process.argv[2];
   const type = async (s) => { for (const ch of s) await page.click(`.key[data-k="${ch}"]`); };
   const words = await (async () => { await page.goto(BASE + '?day=2026-11-16'); return page.evaluate(() => window.CONTENT.words); })();
   const kit = await page.evaluate(() => window.CONTENT.kit);
+  const passages = await page.evaluate(() => window.CONTENT.report.passages);
+  let reportMiss = false;
+  const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
   let sortMiss = false;
   const byHe = Object.fromEntries(words.map((w) => [w.he, w]));
 
@@ -58,12 +61,30 @@ const shots = process.argv[2];
       if (await page.$('#ok')) {
         if (await page.$('.rack')) { await once((await page.$('.rack.preps')) ? 'wintro' : 'kintro', (await page.$('.rack.preps')) ? '30-where-intro' : '27-kit-intro'); await page.click('.hanger'); }
         if (await page.$('.kit-sort')) await once('sorted', '32-sort-done');
+        if (await page.$('.stage.report')) await once('rdone', '38-report-done');
         if (/יריבה חדשה/.test(kicker)) await once('intro', '05-intro');
         if (/הקריאה/.test(await page.textContent('.stage'))) await once('pintro', '23-phrase-intro');
         if (/יריבה חדשה/.test(kicker) && /ice cream/.test(await page.textContent('#say'))) await shot('21-intro-two-words');
         if (/מחצית/.test(kicker)) await once('half', '08-halftime');
         if (/שריקת הסיום/.test(kicker)) await once('full', '11-fulltime');
         await page.click('#ok'); continue;
+      }
+      if (await page.$('.stage.report')) {
+        faces.add('report');
+        const sv = await load();
+        const p = passages[sv.session.queue[sv.session.pos].passage];
+        const qno = await page.textContent('#qno');
+        const text = (await page.textContent('#rq')).replace(/\s+/g, ' ').trim();
+        const yn = p.yesno.find((x) => x.q === text);
+        const fill = p.fill.find((x) => x.q.replace('___', '').replace(/\s+/g, ' ').trim() === text);
+        assert.ok(yn || fill, `report line not found: ${text}`);
+        await once(yn ? 'ryn' : 'rfill', yn ? '35-report-yesno' : '36-report-fill');
+        let v = yn ? (yn.a ? 'yes' : 'no') : fill.a;
+        const miss = !reportMiss && !!fill; if (miss) { reportMiss = true; v = fill.wrong[0]; }
+        await page.click(`#ropts .opt[data-v="${v}"]`);
+        if (miss) { await page.waitForSelector('#rnext'); await shot('37-report-miss'); assert.ok(await page.$('.sen.lit')); await page.click('#rnext'); }
+        await page.waitForFunction((t) => document.getElementById('qno').textContent !== t, qno);
+        continue;
       }
       if (await page.$('.kit-sort')) {
         faces.add('sort'); await once('sort', '31-sort');
@@ -128,7 +149,11 @@ const shots = process.argv[2];
   // day 1: everything right except the first spelling of "chocolate" (a shoot-out kick: points only)
   await playMatch('chocolate');
   await shot('12-career-after');
-  const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
+  // every report answer can be read off its marked sentence, and no wrong word fits
+  for (const p of passages) {
+    assert.equal(p.yesno.length, 3); assert.equal(p.fill.length, 3);
+    for (const f of p.fill) { assert.ok(p.text[f.at].includes(f.a), f.q); assert.ok(!f.wrong.includes(f.a)); assert.equal(new Set(f.wrong).size, 3); }
+  }
   const day1 = words.filter((w) => w.day === 1), day2 = words.filter((w) => w.day === 2);
   let st = await load();
   assert.ok(day1.every((w) => st.cards[w.id].level === 3), 'all 11 in the squad after day 1');
@@ -217,7 +242,9 @@ const shots = process.argv[2];
   assert.deepEqual(['kitintro', 'colour', 'sort', 'whereintro', 'where'].map((t) => q5.filter((x) => x.type === t).length), [1, 6, 1, 1, 4]);
   assert.ok(q5.every((x) => x.type !== 'spell' || !x.wordId.startsWith('p-')));
   const f5 = await playMatch();
-  for (const f of ['spell', 'colour', 'sort', 'where']) assert.ok(f5.has(f), `day 5 has ${f}`);
+  for (const f of ['spell', 'colour', 'sort', 'where', 'report']) assert.ok(f5.has(f), `day 5 has ${f}`);
+  assert.equal(q5.find((x) => x.type === 'report').passage, 0);
+  assert.ok(!q4.some((x) => x.type === 'report'));
   st = await load();
   assert.ok(phrases.every((w) => st.cards[w.id].level === 3), 'the phrases in the squad after day 5');
   await shot('26-career-day5');
@@ -229,6 +256,7 @@ const shots = process.argv[2];
   const q6 = (await load()).session.queue;
   assert.ok(!q6.some((x) => x.type === 'kitintro' || x.type === 'whereintro'));
   assert.equal(q6.filter((x) => x.type === 'colour').length, 6);
+  assert.equal(q6.find((x) => x.type === 'report').passage, 1, 'another text on the next day');
 
   assert.deepEqual(errors, []);
   await browser.close();

@@ -141,6 +141,60 @@ window.CONTENT = {
     preps: [{ en: 'in', he: 'בתוך' }, { en: 'on', he: 'על' }, { en: 'under', he: 'מתחת' }, { en: 'near', he: 'ליד' }],
   },
 
+  /* The Match report (prd.md §4.6, exercise 8 of the test): short texts of ours, written from the test words.
+     Three of them, one a day in turn from day `from`. Each has three yes/no lines and three one-word completions.
+     `at` is the sentence that holds the answer: it lights up after a miss. */
+  report: {
+    from: 5,
+    passages: [
+      {
+        title: 'At school',
+        text: ['I am Tom.', 'I am at school.', 'I am hungry.', 'I have a sandwich with cheese and tomatoes.', 'I like cheese.',
+          "I don't like onions.", 'I drink water.', 'My teacher is near the table.', 'The children eat chips.'],
+        yesno: [
+          { q: 'Tom is at school.', a: true, at: 1 },
+          { q: 'Tom is in the kitchen.', a: false, at: 1 },
+          { q: 'The children eat pizza.', a: false, at: 8 },
+        ],
+        fill: [
+          { q: 'Tom has a ___ with cheese.', a: 'sandwich', wrong: ['table', 'teacher', 'school'], at: 3 },
+          { q: 'Tom drinks ___.', a: 'water', wrong: ['cheese', 'chips', 'onions'], at: 6 },
+          { q: 'The teacher is near the ___.', a: 'table', wrong: ['children', 'sandwich', 'tomatoes'], at: 7 },
+        ],
+      },
+      {
+        title: 'In the kitchen',
+        text: ['This is my kitchen.', 'Mum is in the kitchen.', 'We make a salad.', 'We need tomatoes, carrots and peppers.',
+          'The vegetables are on the table.', 'The bread is near the eggs.', 'I want a milkshake.', 'Mum has coffee.', 'We eat the salad with fish.'],
+        yesno: [
+          { q: 'Mum is in the kitchen.', a: true, at: 1 },
+          { q: 'We make a pizza.', a: false, at: 2 },
+          { q: 'The vegetables are under the table.', a: false, at: 4 },
+        ],
+        fill: [
+          { q: 'We need tomatoes, carrots and ___.', a: 'peppers', wrong: ['eggs', 'bread', 'fish'], at: 3 },
+          { q: 'I want a ___.', a: 'milkshake', wrong: ['coffee', 'salad', 'kitchen'], at: 6 },
+          { q: 'The bread is near the ___.', a: 'eggs', wrong: ['table', 'carrots', 'salad'], at: 5 },
+        ],
+      },
+      {
+        title: 'At the restaurant',
+        text: ['I am at a restaurant with Dad.', 'I am hungry.', 'I want a hamburger and chips.', "I don't like fish.", 'We share a salad.',
+          'I drink orange juice.', 'Dad has tea with lemon.', 'The ice cream is cold and good.', 'I like this restaurant!'],
+        yesno: [
+          { q: 'I am at school.', a: false, at: 0 },
+          { q: 'I want a hamburger.', a: true, at: 2 },
+          { q: 'Dad has coffee.', a: false, at: 6 },
+        ],
+        fill: [
+          { q: 'We share a ___.', a: 'salad', wrong: ['hamburger', 'lemon', 'restaurant'], at: 4 },
+          { q: 'I drink orange ___.', a: 'juice', wrong: ['tea', 'chips', 'fish'], at: 5 },
+          { q: 'Dad has tea with ___.', a: 'lemon', wrong: ['salad', 'juice', 'ice cream'], at: 6 },
+        ],
+      },
+    ],
+  },
+
   /* The table. Clubs of ours: a football word every child knows, and a word from the test.
      Real Madrid is the rival of the Clásico. `rate` = points a club makes for every answer he gives. */
   myClub: 'Barcelona',

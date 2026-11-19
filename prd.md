@@ -89,6 +89,8 @@ Only the clear cases go in the sort pool: red: tomatoes, apples · yellow: banan
 
 Original text of about 8–10 short sentences, using only test words, with 3 yes/no items and 3 one-word completions. Written at build time and reviewed by the owner. Not derived from the worksheet.
 
+Built 19 Nov: three texts of ours (*At school*, *In the kitchen*, *At the restaurant*), nine short sentences each, one a day in turn from day 5. The answers are picked, not typed. After a miss the sentence that holds the answer lights up. Owner review of the texts is pending.
+
 ## 5. Constraints and assumptions
 
 1. **Time:** day 1 is Mon 16 Nov, the day the build starts. The plan has about one day of slack. Two lost days are not recoverable.
