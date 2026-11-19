@@ -22,6 +22,8 @@ const shots = process.argv[2];
   const shot = async (name) => { if (shots) await page.screenshot({ path: `${shots}/${name}.png` }); };
   const type = async (s) => { for (const ch of s) await page.click(`.key[data-k="${ch}"]`); };
   const words = await (async () => { await page.goto(BASE + '?day=2026-11-16'); return page.evaluate(() => window.CONTENT.words); })();
+  const kit = await page.evaluate(() => window.CONTENT.kit);
+  let sortMiss = false;
   const byHe = Object.fromEntries(words.map((w) => [w.he, w]));
 
   // setup: a wrong name first, then the right one
@@ -54,6 +56,8 @@ const shots = process.argv[2];
       if (await page.$('.fb')) { await page.click('.fb').catch(() => {}); continue; }
       const kicker = (await page.textContent('.kicker')).trim();
       if (await page.$('#ok')) {
+        if (await page.$('.rack')) { await once((await page.$('.rack.preps')) ? 'wintro' : 'kintro', (await page.$('.rack.preps')) ? '30-where-intro' : '27-kit-intro'); await page.click('.hanger'); }
+        if (await page.$('.kit-sort')) await once('sorted', '32-sort-done');
         if (/יריבה חדשה/.test(kicker)) await once('intro', '05-intro');
         if (/הקריאה/.test(await page.textContent('.stage'))) await once('pintro', '23-phrase-intro');
         if (/יריבה חדשה/.test(kicker) && /ice cream/.test(await page.textContent('#say'))) await shot('21-intro-two-words');
@@ -61,7 +65,28 @@ const shots = process.argv[2];
         if (/שריקת הסיום/.test(kicker)) await once('full', '11-fulltime');
         await page.click('#ok'); continue;
       }
-      if (await page.$('.opt.blend')) {
+      if (await page.$('.kit-sort')) {
+        faces.add('sort'); await once('sort', '31-sort');
+        const food = (await page.textContent('#food')).trim();
+        const col = Object.keys(kit.sort).find((c) => kit.sort[c].some((id) => words.find((w) => w.id === id).en === food));
+        const first = !sortMiss; sortMiss = true; // the first food of the first sort goes to a wrong shelf
+        const cols = await page.$$eval('.shelf', (els) => els.map((x) => x.dataset.c));
+        await page.click(`.shelf[data-c="${first ? cols.find((c) => c !== col) : col}"]`);
+        if (first) { await page.waitForTimeout(300); await shot('33-sort-miss'); }
+        await page.waitForFunction((f) => document.getElementById('food').textContent.trim() !== f || document.getElementById('ok'), food);
+        continue;
+      }
+      if (await page.$('.kit-colour')) {
+        faces.add('colour');
+        const rev = await page.$('#cue');
+        await once(rev ? 'crev' : 'col', rev ? '29-colour-word' : '28-colour-shirt');
+        const c = rev ? await rev.getAttribute('data-c') : (await page.textContent('#say')).replace('🔊', '').trim();
+        await page.click(`.opt[data-c="${c}"]`);
+      } else if (await page.$('.kit-where')) {
+        faces.add('where'); await once('where', '34-where');
+        const p = (await page.getAttribute('.scene.big', 'class')).match(/pos-(\w+)/)[1];
+        await page.click(`.opt[data-p="${p}"]`);
+      } else if (await page.$('.opt.blend')) {
         faces.add('whistle'); await once('wh', '07-whistle');
         const said = await lastSaid();
         const w = words.find((x) => x.en === said);
@@ -188,12 +213,22 @@ const shots = process.argv[2];
   await page.click('#go');
   const q5 = (await load()).session.queue;
   assert.equal(q5.filter((x) => x.type === 'spell').length, 5);
+  assert.ok(!q4.some((x) => ['colour', 'sort', 'where'].includes(x.type)), 'the Kit room is closed on day 4');
+  assert.deepEqual(['kitintro', 'colour', 'sort', 'whereintro', 'where'].map((t) => q5.filter((x) => x.type === t).length), [1, 6, 1, 1, 4]);
   assert.ok(q5.every((x) => x.type !== 'spell' || !x.wordId.startsWith('p-')));
   const f5 = await playMatch();
-  assert.ok(f5.has('spell'));
+  for (const f of ['spell', 'colour', 'sort', 'where']) assert.ok(f5.has(f), `day 5 has ${f}`);
   st = await load();
   assert.ok(phrases.every((w) => st.cards[w.id].level === 3), 'the phrases in the squad after day 5');
   await shot('26-career-day5');
+
+  // day 6: the Kit room is introduced only once
+  assert.equal(st.kitSeen, true);
+  await page.goto(BASE + '?day=2026-11-21');
+  await page.click('#go');
+  const q6 = (await load()).session.queue;
+  assert.ok(!q6.some((x) => x.type === 'kitintro' || x.type === 'whereintro'));
+  assert.equal(q6.filter((x) => x.type === 'colour').length, 6);
 
   assert.deepEqual(errors, []);
   await browser.close();

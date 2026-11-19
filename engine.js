@@ -102,9 +102,29 @@
     return out;
   }
 
+  const KIT_COLOURS = 6; // colour questions a day, out of the ten
+
+  /* The Kit room: colour words (read the word and pick the shirt, or the other way round), the colour sort
+     (three shelves, two foods each, only foods already met), and where the ball is. All sets: no box moves. */
+  function kitItems(kit, cards, intro, rng) {
+    const out = [];
+    const set = (x) => Object.assign(x, { set: true, phase: 'second' });
+    if (intro) out.push({ type: 'kitintro' });
+    shuffle(kit.colours, rng).slice(0, KIT_COLOURS).forEach((c, i) => out.push(set({ type: 'colour', colour: c.en, rev: i % 2 === 1 })));
+    const met = (id) => cards[id] && cards[id].seen;
+    const shelves = shuffle(Object.keys(kit.sort).filter((c) => kit.sort[c].filter(met).length >= 2), rng).slice(0, 3);
+    if (shelves.length === 3) {
+      const foods = shelves.flatMap((c) => shuffle(kit.sort[c].filter(met), rng).slice(0, 2).map((id) => ({ id, col: c })));
+      out.push(set({ type: 'sort', cols: shelves, foods: shuffle(foods, rng) }));
+    }
+    if (intro) out.push({ type: 'whereintro' });
+    for (const p of shuffle(kit.preps, rng)) out.push(set({ type: 'where', prep: p.en }));
+    return out;
+  }
+
   /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
      Items marked `set` (Sentence fill, the shoot-out) never move a box. */
-  function buildSession({ words, foils = [], cards, today, dayNum, speech, rng = Math.random }) {
+  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, rng = Math.random }) {
     const warm = dueWords(words, cards, today, rng).map((w) => (
       { type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' }));
 
@@ -112,10 +132,11 @@
     // Sentence fill (a test-shaped set, never moves a box): words already in the squad, in a sentence.
     const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
       .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
+    const room = kit && dayNum >= kit.from ? kitItems(kit, cards, kitIntro, rng) : [];
     if (!fresh.length) {
       if (!warm.length) return [];
       const kickers = shuffle(warm.map((x) => words.find((w) => w.id === x.wordId)).filter(kickable), rng).slice(0, KICKS);
-      return warm.concat(sentences, kickers.length ? [{ type: 'shootout' }] : [],
+      return warm.concat(room, sentences, kickers.length ? [{ type: 'shootout' }] : [],
         kickers.map((w) => ({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' })));
     }
     // A long review would push the new words too late in the evening: they go first, and the review follows half-time.
@@ -140,9 +161,9 @@
     }
 
     q.push({ type: 'halftime' });
-    if (!late) q.push(...sentences);
+    if (!late) q.push(...room, ...sentences);
     for (const w of shuffle(fresh, rng)) q.push({ type: w.blend ? 'missing' : 'bank', wordId: w.id, phase: 'second' });
-    if (late) q.push(...warm, ...sentences);
+    if (late) q.push(...warm, ...room, ...sentences);
     // every match ends with typed kicks: when the new entries cannot be typed (phrases), squad words step up
     const kickers = shuffle(fresh.filter(kickable), rng);
     if (kickers.length < KICKS) {

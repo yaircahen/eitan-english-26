@@ -371,7 +371,10 @@
     if (!state.session || state.session.day !== t) {
       state.session = {
         day: t,
-        queue: E.buildSession({ words: C.words, foils: C.foils, cards: state.cards, today: t, dayNum: dayNum(t), speech: Voice.ok }),
+        queue: E.buildSession({
+          words: C.words, foils: C.foils, cards: state.cards, today: t, dayNum: dayNum(t), speech: Voice.ok,
+          kit: C.kit, kitIntro: !state.kitSeen,
+        }),
         pos: 0, points: 0, combo: 0, bestCombo: 0, right: 0, total: 0,
         promoted: [], dropped: [], ms: 0,
       };
@@ -413,9 +416,22 @@
     }
     if (s.pos >= s.queue.length) return fullTime();
     const item = s.queue[s.pos];
-    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout })[item.type](item);
+    ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout, kitintro, colour, sort, whereintro, where })[item.type](item);
   }
   function next() { clock(); state.session.pos++; save(); play(); }
+
+  function tally(correct) { // points and the combo for one answer
+    const s = state.session;
+    s.total++;
+    if (!correct) { s.combo = 0; return 0; }
+    s.right++;
+    s.combo++;
+    s.bestCombo = Math.max(s.bestCombo, s.combo);
+    const gained = 10 * mult(s.combo);
+    s.points += gained;
+    state.points += gained;
+    return gained;
+  }
 
   function settle(item, correct, missHtml) {
     if (locked) return;
@@ -430,20 +446,11 @@
       if (res.to > res.from) s.promoted.push(item.wordId);
       if (res.to < res.from) s.dropped.push(item.wordId);
     }
-    s.total++;
-    let gained = 0;
-    if (correct) {
-      s.right++;
-      s.combo++;
-      s.bestCombo = Math.max(s.bestCombo, s.combo);
-      gained = 10 * mult(s.combo);
-      s.points += gained;
-      state.points += gained;
-    } else s.combo = 0;
+    const gained = tally(correct);
     clock();
     save();
 
-    const word = item.wordId ? WORD[item.wordId].en : item.foil;
+    const word = item.wordId ? WORD[item.wordId].en : item.foil || item.colour || item.prep;
     const spoken = Voice.say(item.type === 'sentence' ? WORD[item.wordId].sent[0].replace('___', word) : word);
     const moved = res && res.to !== res.from;
     const fb = document.createElement('div');
@@ -645,6 +652,120 @@
     typed(item, {
       kicker: item.phase === 'shootout' || item.retry ? 'פנדל! כותבים את המילה כולה' : 'כותבים את המילה כולה',
       goLabel: 'בועטים', prefix: '', suffix: '', answer: WORD[item.wordId].en, full: true,
+    });
+  }
+
+  // ---------- the Kit room: colours, the colour sort, and where the ball is. Sets: they never move a box ----------
+  const COLOUR = Object.fromEntries(C.kit.colours.map((c) => [c.en, c]));
+  const PREP = Object.fromEntries(C.kit.preps.map((p) => [p.en, p]));
+  const shirt = (c, cls = '') => `<i class="shirt ${cls}" style="--c:${COLOUR[c].hex}"></i>`;
+  const scene = (p, cls = '') => `<span class="scene pos-${p} ${cls}"><i class="box"></i><i class="ball">⚽</i></span>`;
+
+  function kitintro() {
+    screen(`<section class="play">${hud()}
+      <div class="stage">
+        <p class="kicker">חדר ההלבשה</p>
+        <h1 class="h-sm">עשר חולצות, עשרה צבעים</h1>
+        <p class="line">כל חולצה יודעת את השם שלה באנגלית. נוגעים בחולצה ושומעים אותה.</p>
+        <div class="rack">${C.kit.colours.map((c) => `<button class="hanger" data-c="${c.en}">${shirt(c.en)}<b dir="ltr" lang="en">${c.en}</b><span>${c.he}</span></button>`).join('')}</div>
+        <button class="btn btn-go" id="ok">למדפים</button>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.hanger', (e) => Voice.say(e.currentTarget.dataset.c));
+    on('#ok', () => { Sfx.tap(); state.kitSeen = true; next(); });
+  }
+
+  // a colour word and four shirts, or a shirt and four colour words
+  function colour(item) {
+    const c = COLOUR[item.colour];
+    const opts = E.shuffle([c, ...E.shuffle(C.kit.colours.filter((x) => x.en !== c.en), Math.random).slice(0, 3)], Math.random);
+    screen(`<section class="play">${hud()}
+      <div class="stage kit-colour">
+        <p class="kicker">${item.rev ? 'חדר ההלבשה: איך קוראים לחולצה הזאת?' : 'חדר ההלבשה: איזו חולצה היא?'}</p>
+        ${item.rev ? `<div id="cue" data-c="${c.en}">${shirt(c.en, 'big')}</div>`
+    : `<button class="say bigword" id="say" dir="ltr" lang="en">${c.en} <span>🔊</span></button>`}
+        <div class="opts ${item.rev ? '' : 'four'}" dir="ltr">${opts.map((o) => (item.rev
+    ? `<button class="opt word" data-c="${o.en}">${o.en}</button>`
+    : `<button class="opt" data-c="${o.en}" aria-label="${o.he}">${shirt(o.en)}</button>`)).join('')}</div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    if (!item.rev) { Voice.say(c.en); on('#say', () => Voice.say(c.en)); }
+    on('.opt', (e) => {
+      const ok = e.currentTarget.dataset.c === c.en;
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`.opt[data-c="${c.en}"]`).classList.add('is-right');
+      settle(item, ok, `<span class="lbl fbrow">${shirt(c.en, 'sm')} ${en(c.en)} זה ${c.he}</span>`);
+    });
+  }
+
+  // the colour sort: six foods, three shelves, two on each
+  function sort(item) {
+    let i = 0;
+    screen(`<section class="play">${hud()}
+      <div class="stage kit-sort">
+        <p class="kicker">המחסנאי התבלבל: כל מאכל למדף של הצבע שלו</p>
+        <div class="bigword" id="food" dir="ltr" lang="en"></div>
+        <div class="shelves" dir="ltr">${item.cols.map((c) => `<button class="shelf" data-c="${c}"><b lang="en">${c}</b><span class="on"></span></button>`).join('')}</div>
+        <p class="note" id="sortnote"></p>
+      </div></section>`, 'scr-play');
+    bindHud();
+    const show = () => { document.getElementById('food').textContent = WORD[item.foods[i].id].en; Voice.say(WORD[item.foods[i].id].en); };
+    show();
+    on('.shelf', (e) => {
+      if (locked) return;
+      locked = true;
+      const f = item.foods[i], w = WORD[f.id];
+      const ok = e.currentTarget.dataset.c === f.col;
+      tally(ok); clock(); save();
+      (ok ? Sfx.goal : Sfx.slip)(state.session.combo);
+      if (!ok) e.currentTarget.classList.add('is-wrong');
+      const home = $app.querySelector(`.shelf[data-c="${f.col}"]`);
+      home.querySelector('.on').insertAdjacentHTML('beforeend', `<span class="chip ${ok ? '' : 'moved'}">${w.emoji} ${en(w.en)}</span>`);
+      document.getElementById('sortnote').innerHTML = ok ? '' : `${en(w.en)} חמקה למדף של ${en(f.col)}.`;
+      document.getElementById('pts').textContent = state.session.points;
+      const comboEl = $app.querySelector('.combo b'); if (comboEl) comboEl.textContent = state.session.combo;
+      setTimeout(() => {
+        $app.querySelectorAll('.shelf.is-wrong').forEach((x) => x.classList.remove('is-wrong'));
+        if (++i < item.foods.length) { locked = false; return show(); }
+        document.getElementById('food').textContent = '';
+        $app.querySelectorAll('.shelf').forEach((x) => { x.style.setProperty('--c', COLOUR[x.dataset.c].hex); x.classList.add('lit'); });
+        $app.querySelector('.stage').insertAdjacentHTML('beforeend', '<button class="btn btn-go" id="ok">המדפים מסודרים. ממשיכים</button>');
+        on('#ok', () => { Sfx.tap(); next(); });
+      }, ok ? 700 : 1800);
+    });
+  }
+
+  function whereintro() {
+    screen(`<section class="play">${hud()}
+      <div class="stage">
+        <p class="kicker">חדר ההלבשה</p>
+        <h1 class="h-sm">הכדור מתחבא ליד הארגז</h1>
+        <p class="line">ארבע מילים קטנות יודעות איפה הוא. נוגעים ושומעים.</p>
+        <div class="rack preps">${C.kit.preps.map((p) => `<button class="hanger" data-p="${p.en}">${scene(p.en)}<b dir="ltr" lang="en">${p.en}</b><span>${p.he}</span></button>`).join('')}</div>
+        <button class="btn btn-go" id="ok">מחפשים את הכדור</button>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.hanger', (e) => Voice.say(e.currentTarget.dataset.p));
+    on('#ok', () => { Sfx.tap(); next(); });
+  }
+
+  function where(item) {
+    const p = PREP[item.prep];
+    const sent = (inner) => `The ball is <b class="gap">${inner}</b> the box.`;
+    screen(`<section class="play">${hud()}
+      <div class="stage kit-where">
+        <p class="kicker">איפה הכדור?</p>
+        ${scene(p.en, 'big')}
+        <p class="sentence" id="wsent" dir="ltr" lang="en">${sent('&nbsp;')}</p>
+        <div class="opts four" dir="ltr">${E.shuffle(C.kit.preps, Math.random).map((o) => `<button class="opt word" data-p="${o.en}">${o.en}</button>`).join('')}</div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.opt', (e) => {
+      const ok = e.currentTarget.dataset.p === p.en;
+      e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+      $app.querySelector(`.opt[data-p="${p.en}"]`).classList.add('is-right');
+      document.getElementById('wsent').innerHTML = sent(p.en);
+      settle(item, ok, `<span class="lbl">${en(p.en)} זה ${p.he}</span><span class="sentence sm" dir="ltr" lang="en">${sent(p.en)}</span>`);
     });
   }
 

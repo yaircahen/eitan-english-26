@@ -219,3 +219,27 @@ test('phrases cannot be typed, so squad words take the kicks', () => {
   assert.ok(kicks.every((x) => x.wordId !== 'p-yes' && x.set));
   assert.deepEqual(q.filter((x) => x.wordId === 'p-yes').map((x) => x.type), ['intro', 'recognise', 'bank', 'bank']);
 });
+
+test('the Kit room: opens on its day, sets only, three shelves of two foods he has met', () => {
+  const kit = {
+    from: 2,
+    colours: ['red', 'blue', 'green', 'yellow', 'orange', 'brown', 'black', 'white'].map((en) => ({ en })),
+    sort: { red: ['chicken', 'chips'], yellow: ['chair', 'cheese'], brown: ['kitchen', 'school', 'sheep'], white: ['sheep', 'nope'] },
+    preps: ['in', 'on', 'under', 'near'].map((en) => ({ en })),
+  };
+  const cards = cardsFor();
+  assert.ok(!E.buildSession({ words, cards, today: D1, dayNum: 1, speech: true, kit, kitIntro: true }).some((x) => /colour|sort|where|kit/.test(x.type)));
+  sit(cards, D1, 1, () => true);
+  const q = E.buildSession({ words, cards, today: D2, dayNum: 2, speech: true, kit, kitIntro: true });
+  const of = (t) => q.filter((x) => x.type === t);
+  assert.deepEqual(['kitintro', 'colour', 'sort', 'whereintro', 'where'].map((t) => of(t).length), [1, 6, 1, 1, 4]);
+  assert.ok(q.filter((x) => ['colour', 'sort', 'where'].includes(x.type)).every((x) => x.set));
+  assert.ok(q.indexOf(of('kitintro')[0]) < q.indexOf(of('colour')[0]) && q.indexOf(of('whereintro')[0]) < q.indexOf(of('where')[0]));
+  const s = of('sort')[0];
+  assert.deepEqual(s.cols.slice().sort(), ['brown', 'red', 'yellow'], 'white has only one food he has met');
+  assert.equal(s.foods.length, 6);
+  assert.ok(s.foods.every((f) => kit.sort[f.col].includes(f.id) && cards[f.id].seen));
+  assert.ok(q.indexOf(s) > q.findIndex((x) => x.type === 'halftime'));
+  const again = E.buildSession({ words, cards, today: D2, dayNum: 2, speech: true, kit });
+  assert.ok(!again.some((x) => x.type === 'kitintro' || x.type === 'whereintro'));
+});

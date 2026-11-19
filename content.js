@@ -20,6 +20,8 @@ window.CONTENT = {
       missing: ['האותיות חזרו הביתה!', 'סגירה הרמטית!', 'החור נסתם!', 'בדיוק במקום!', 'המילה שלמה שוב!'],
       bank: ['נשלפה מהמחסן!', 'בחירה של קפטן!', 'נמצאה בין כולן!', 'הוצאה מהשורה!', 'אין לה לאן לברוח!'],
       sentence: ['המשפט שלם!', 'מסירה מדויקת!', 'נכנסה בדיוק לרווח!', 'המשפט סגור!', 'חיבור מושלם!'],
+      colour: ['החולצה הנכונה!', 'המחסנאי מוחא כפיים!', 'צבע מדויק!', 'ישר מהמתלה!', 'החולצה נמצאה!'],
+      where: ['הכדור אותר!', 'עין של חלוץ!', 'בדיוק שם!', 'הכדור לא מצליח להתחבא!', 'נמצא!'],
       spell: ['גוווול!', 'ישר לחיבורים!', 'רשת!', 'פנדל מושלם!', 'השוער אפילו לא זז!', 'בעיטה של קפטן!'],
     },
     sub: [
@@ -119,6 +121,25 @@ window.CONTENT = {
     { id: 'p-eat', en: 'What do you want to eat?', he: 'מה אתה רוצה לאכול?', emoji: '🍴', phrase: true, day: 5, line: 'מסתובבת עם תפריט ומבלבלת את ההגנה.' },
     { id: 'p-drink', en: 'What do you want to drink?', he: 'מה אתה רוצה לשתות?', emoji: '🥤', phrase: true, day: 5, line: 'מחלקת כוסות ליד הקו במקום לשחק.' },
   ],
+
+  /* The Kit room (prd.md §6.3): test-shaped sets, never Leitner cards. Opens on day `from`.
+     colours: the owner's list of 19 Nov. sort: only foods whose colour is not in doubt (exercise 3 of the test).
+     preps: where the ball is, next to the box. */
+  kit: {
+    from: 5,
+    colours: [
+      { en: 'red', he: 'אדום', hex: '#e02b2b' }, { en: 'blue', he: 'כחול', hex: '#1f6fe0' },
+      { en: 'green', he: 'ירוק', hex: '#2faa4f' }, { en: 'yellow', he: 'צהוב', hex: '#f5d21f' },
+      { en: 'orange', he: 'כתום', hex: '#f58a1f' }, { en: 'brown', he: 'חום', hex: '#7a4a21' },
+      { en: 'black', he: 'שחור', hex: '#15171c' }, { en: 'white', he: 'לבן', hex: '#ffffff' },
+      { en: 'purple', he: 'סגול', hex: '#8a3fd1' }, { en: 'grey', he: 'אפור', hex: '#8d949e' },
+    ],
+    sort: {
+      red: ['tomatoes', 'apples'], yellow: ['bananas', 'lemon', 'cheese', 'chips'], brown: ['chocolate', 'bread', 'cookie'],
+      orange: ['oranges', 'carrots'], green: ['spinach', 'salad'], white: ['milk', 'eggs'],
+    },
+    preps: [{ en: 'in', he: 'בתוך' }, { en: 'on', he: 'על' }, { en: 'under', he: 'מתחת' }, { en: 'near', he: 'ליד' }],
+  },
 
   /* The table. Clubs of ours: a football word every child knows, and a word from the test.
      Real Madrid is the rival of the Clásico. `rate` = points a club makes for every answer he gives. */
