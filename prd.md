@@ -58,6 +58,8 @@ Eight exercises:
 
 Also required: spelling the name in English (E-I-T-A-N), reading and translating the words to Hebrew, recognising the blend when it is missing, knowing *in / on / under / near*, knowing the colour words in writing.
 
+**The practice page (owner, 21 Nov).** The teacher's practice page shows the paper's shape; its text is not copied here. 1: five lines, write the blend heard. 2: a bank of five food words and five pictures, the word written under each. 3: a bank of six food words, written into three colour columns, two each. 4: four pictures, each with its word and a two-letter gap. 5: a bank of three words and three "I want to make… I need ___" lines. 6: the alphabet in a table, capitals above small letters, A–M and N–Z, gaps in both rows. 7: four sentence starts and four words, the number written next to each word. 8: a story of about twelve sentences with names and feelings, two or three words glossed in Hebrew, three Yes/No lines (one needs a small inference) and three lines completed with a word from the story, one with two gaps. Built 21 Nov: the mock reproduces each of these shapes (§10).
+
 Not confirmed: whether the real test has audio (exercise 1 is read aloud by the teacher), which colours appear in exercise 3 beyond yellow / brown / red, and the exact passage length. Ask the owner.
 
 ### 4.2 Vocabulary (61 words)
@@ -83,7 +85,7 @@ I like… · I don't like… · I want… · I need… · I'm hungry · Do you l
 
 ### 4.5 Foods for the colour sort
 
-Only the clear cases go in the sort pool: red: tomatoes, apples · yellow: bananas, lemon, cheese, chips · brown: chocolate, bread, cookie · orange: oranges, carrots · green: spinach, salad · white: milk, eggs. Blue, black, purple and grey have no food in the list: they are practised as colour words only (built 19 Nov). Peppers, coffee, jam and the rest are left out as unclear.
+Only the clear cases go in the sort pool: red: tomatoes, apples · yellow: bananas, lemon, cheese, chips · brown: chocolate, bread, cookie · orange: oranges, carrots · green: spinach, salad · white: milk, eggs. Blue, black, purple and grey have no food in the list: they are practised as colour words only (built 19 Nov). Peppers and the rest are left out as unclear. Coffee (brown) and jam (red) were added on 21 Nov: the practice page sorts them that way.
 
 ### 4.6 The reading passage
 
@@ -140,7 +142,7 @@ Each word is one card with several faces. The drill chosen depends on its level.
 
 ### 6.3 Test-shaped sets
 
-Not Leitner cards, but queue items: **Kit room** (colour sort), **Team dinner** (ingredients), **Kit numbers** (letter pairs, which are also cards per pair), **Sentence fill**, **Match report**, and the **Name** card (Eitan on the jersey, typed). They enter the day's queue once the words they use are at level 2 or more.
+Not Leitner cards, but queue items: **Kit room** (colour sort), **Team dinner** (ingredients), **Kit numbers** (letter pairs, which are also cards per pair), **Sentence fill**, **Match report**, and the **Name** card (Eitan on the jersey, typed; in the daily match up to day 6, then at the top of every mock). They enter the day's queue once the words they use are at level 2 or more.
 
 ## 7. Game design (Octalysis)
 
@@ -205,6 +207,7 @@ Every answer returns a reaction in under 300 ms: a sound, a card animation, the 
 
 - **The training ground** is free play: any drill on any word, with a tally of "training minutes" and nothing else. It **never moves a box**, grants a pack or changes the streak.
 - **The cap** is set by a parent (§8): minutes or rounds, default 15 minutes a day. When the cap is reached the game ends on a high note ("training over, back tomorrow") and never as a punishment.
+- **Built 21 Nov: the craftiest opponents.** The training ground opens after the day's match. Each round takes the words with the most misses (tricky words first, plus words missed on test-shaped sets) and shows each one's card first (picture, Hebrew, its line) before two turns on test faces. Letter pairs, colours, prepositions, dishes and sort foods missed in matches and mocks come back too. A miss comes back once at the end of the round. Rounds of about 15 items; minutes only, no points, no pack, no box moves.
 
 ## 8. The parent
 
@@ -249,10 +252,10 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | 3 | Wed 18 | 12 food words (lemon, tomatoes, cookie, oranges, juice, salad, meat, hamburger, jam, carrots, tea, coffee), colours, prepositions, letters 3 | up to 30 min. Split decided 17 Nov: 31 reviews are already due, so fewer new words |
 | 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), letters 4–5 | up to 25 min. New words in the first half, review in the second |
 | 5 | Fri 20 | the ten phrases (moved from day 4 by the owner, 19 Nov), the Kit room opens (colours, colour sort, in / on / under / near), review and the reading passage | |
-| 6 | Sat 21 | none, review. Team dinner opens (built 19 Nov). Kit numbers run from day 5: Aa–Ff, Gg–Ll, Mm–Rr, Ss–Zz, then eight mixed pairs a day | |
-| 7 | Sun 22 | none, review, the first test-shaped mock | |
+| 6 | Sat 21 | none, review. Mega Saturday (owner, 21 Nov): after the match, if he wants more, a bonus friendly in the test's shape opens a day early and the training ground runs to 45 minutes. Opt-in, no box moves, no extra pack; a fourth story keeps the stories fresh for Sun–Tue. Team dinner opens (built 19 Nov). Kit numbers run from day 5: Aa–Ff, Gg–Ll, Mm–Rr, Ss–Zz, then eight mixed pairs a day | |
+| 7 | Sun 22 | none, review, the first test-shaped mock | Built 21 Nov, reshaped the same day after the practice page (§4.1): the mock is the paper. Blends heard are written; the picture bank, the dinner lines and the alphabet table are boards of gaps written one after another; the starts are matched to words; the story answers are written, one try per gap, a wrong word crossed out and the right one written beside it. Three stories of ours, one per mock day. Owner review of the stories is pending. from day 7 the match is the review and the kicks, and the sets move into the mock. The mock opens after the match: the name at the top of the page, the eight exercises in the test's order (each opened by a numbered card), then extra time (colours, in/on/under/near). Sets only: no box moves, no pack; points yes. The coach screen shows each exercise's score and what was missed |
 | 8 | Mon 23 | none. **Target day: every word at level 5** | second mock |
-| 9 | Tue 24 | none. Buffer and the **Clásico** mock | |
+| 9 | Tue 24 | none. Buffer and the **Clásico** mock | the same mock, against Real Madrid |
 | 10 | Wed 25 | test day: a 5-minute optional warm-up | |
 
 ## 11. Open questions

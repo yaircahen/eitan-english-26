@@ -102,6 +102,23 @@
     return out;
   }
 
+  /* The colour sort: three shelves, two foods on each, only foods already met. `want` are foods that must be on it
+     (the training ground brings back the ones that went to the wrong shelf). */
+  function sortItem(kit, cards, rng, want = []) {
+    const met = (id) => cards[id] && cards[id].seen;
+    const colOf = (id) => Object.keys(kit.sort).find((c) => kit.sort[c].includes(id));
+    const must = [...new Set(want.map(colOf).filter(Boolean))];
+    const rest = shuffle(Object.keys(kit.sort).filter((c) => !must.includes(c) && kit.sort[c].filter(met).length >= 2), rng);
+    const shelves = must.filter((c) => kit.sort[c].filter(met).length >= 2).concat(rest).slice(0, 3);
+    if (shelves.length < 3) return null;
+    const foods = shelves.flatMap((c) => {
+      const pool = kit.sort[c].filter(met);
+      const first = pool.filter((id) => want.includes(id));
+      return first.concat(shuffle(pool.filter((id) => !first.includes(id)), rng)).slice(0, 2).map((id) => ({ id, col: c }));
+    });
+    return { type: 'sort', cols: shelves, foods: shuffle(foods, rng) };
+  }
+
   const KIT_COLOURS = 6; // colour questions a day, out of the ten
 
   /* The Kit room: colour words (read the word and pick the shirt, or the other way round), the colour sort
@@ -111,12 +128,8 @@
     const set = (x) => Object.assign(x, { set: true, phase: 'second' });
     if (intro) out.push({ type: 'kitintro' });
     shuffle(kit.colours, rng).slice(0, KIT_COLOURS).forEach((c, i) => out.push(set({ type: 'colour', colour: c.en, rev: i % 2 === 1 })));
-    const met = (id) => cards[id] && cards[id].seen;
-    const shelves = shuffle(Object.keys(kit.sort).filter((c) => kit.sort[c].filter(met).length >= 2), rng).slice(0, 3);
-    if (shelves.length === 3) {
-      const foods = shelves.flatMap((c) => shuffle(kit.sort[c].filter(met), rng).slice(0, 2).map((id) => ({ id, col: c })));
-      out.push(set({ type: 'sort', cols: shelves, foods: shuffle(foods, rng) }));
-    }
+    const srt = sortItem(kit, cards, rng);
+    if (srt) out.push(set(srt));
     if (intro) out.push({ type: 'whereintro' });
     for (const p of shuffle(kit.preps, rng)) out.push(set({ type: 'where', prep: p.en }));
     return out;
@@ -124,16 +137,21 @@
 
   /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
      Items marked `set` (Sentence fill, the shoot-out) never move a box. */
-  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, dinner = null, letters = null, rng = Math.random }) {
+  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, dinner = null, letters = null, mock = null, name = false, rng = Math.random }) {
+    // From the first mock day on, the test-shaped sets live in the mock: the match is the review and the kicks.
+    if (mock && dayNum >= mock.from) { kit = null; report = null; dinner = null; letters = null; name = false; }
     const warm = dueWords(words, cards, today, rng).map((w) => (
       { type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' }));
 
     const fresh = words.filter((w) => !(cards[w.id] && cards[w.id].seen) && w.day <= dayNum);
     // Sentence fill (a test-shaped set, never moves a box): words already in the squad, in a sentence.
-    const sentences = shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
+    const noSets = !!(mock && dayNum >= mock.from);
+    const sentences = noSets ? [] : shuffle(words.filter((w) => w.sent && cards[w.id] && cards[w.id].seen && cards[w.id].level >= 3), rng)
       .slice(0, SET_SIZE).map((w) => ({ type: 'sentence', wordId: w.id, set: true, phase: 'second' }));
     const room = kit && dayNum >= kit.from ? kitItems(kit, cards, kitIntro, rng) : [];
     const set = (x) => Object.assign(x, { set: true, phase: 'second' });
+    // his name, typed as on the top of the test paper
+    if (name) room.push(set({ type: 'name' }));
     // Kit numbers: the day's letters, half from the capital and half from the small one
     if (letters && dayNum >= letters.from) {
       const k = dayNum - letters.from;
@@ -221,7 +239,179 @@
     }
   }
 
-  const Engine = { newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, squadFace, shuffle };
+  /* ---------- the mock match: the test's eight exercises in the test's order, plus the name and extra time ----------
+     Every item is a set: a mock never moves a box. `part` names the exercise, for the coach's report. */
+  const MOCK_PARTS = ['name', 'whistle', 'bank', 'sort', 'missing', 'dinner', 'letter', 'sentence', 'report', 'extra'];
+  const typable = (w) => /^[a-z]+$/.test(w.en);
+
+  /* Exercise 5: three dishes and a bank of three words. A word is never an ingredient of another dish on the board,
+     and words that clearly do not go in the other dishes come first, so the bank works by elimination, as on paper. */
+  function dinnerBoard(dishes, cards, rng) {
+    const met = (id) => cards[id] && cards[id].seen;
+    for (let tries = 0; tries < 200; tries++) {
+      const ds = shuffle(dishes, rng).slice(0, 3);
+      const rows = [];
+      for (const d of ds) {
+        const others = ds.filter((x) => x !== d);
+        const ok = shuffle(d.need, rng)
+          .filter((id) => met(id) && others.every((o) => !o.need.includes(id)) && !rows.some((r) => r.a === id))
+          .sort((a, b) => others.filter((o) => o.not.includes(b)).length - others.filter((o) => o.not.includes(a)).length);
+        if (!ok.length) break;
+        rows.push({ dish: d.dish, a: ok[0] });
+      }
+      if (rows.length === 3) return { type: 'dinnerboard', rows, bank: shuffle(rows.map((r) => r.a), rng) };
+    }
+    return null;
+  }
+
+  /* Exercise 6: half of the alphabet in a table, capitals above and small letters below, with gaps in both rows.
+     A column keeps at least one of its two letters, as on the practice page. */
+  function abcBoard(half, rng, blanks = 9) {
+    const letters = [...'abcdefghijklmnopqrstuvwxyz'].slice(half * 13, half * 13 + 13);
+    const cols = shuffle(letters.map((_, i) => i), rng).slice(0, blanks).sort((a, b) => a - b);
+    return { type: 'abc', half, letters, blanks: cols.map((i) => ({ i, row: rng() < 0.5 ? 'cap' : 'small' })) };
+  }
+
+  /* Exercise 7: four sentence starts and four words, one word from each of four groups. */
+  function matchBoard(words, cards, groups, rng) {
+    const ok = (id) => { const w = words.find((x) => x.id === id); return w && w.sent && cards[id] && cards[id].seen; };
+    const gs = shuffle(groups, rng).slice(0, 4);
+    const ids = gs.map((g) => shuffle(g.filter(ok), rng)[0]).filter(Boolean);
+    return ids.length === 4 ? { type: 'matchboard', ids: shuffle(ids, rng), words: shuffle(ids, rng) } : null;
+  }
+
+  function buildMock({ words, cards, dayNum, speech, kit, dinner, letters, report, shape = {}, rng = Math.random }) {
+    const met = words.filter((w) => cards[w.id] && cards[w.id].seen && !w.phrase);
+    const isMet = (id) => cards[id] && cards[id].seen;
+    const take = (list, n) => shuffle(list, rng).slice(0, n);
+    const parts = {};
+    parts.name = [{ type: 'name' }];
+    // 1. five words by ear, the blend written
+    const heard = met.filter((w) => w.blend && !w.silent);
+    const ch = take(heard.filter((w) => w.blend === 'ch'), 3), sh = take(heard.filter((w) => w.blend === 'sh'), 3);
+    const byEar = shuffle(ch.concat(sh), rng).slice(0, 5);
+    parts.whistle = byEar.map((w) => (speech ? { type: 'whistle', wordId: w.id, write: true } : { type: 'missing', wordId: w.id }));
+    // 2. five pictures, a bank of five, the word written under each
+    const pics = (shape.pictures || met.map((w) => w.id)).filter((id) => isMet(id) && typable(words.find((w) => w.id === id)));
+    parts.bank = pics.length >= 5 ? [{ type: 'bankboard', ids: take(pics, 5) }] : take(met, 5).map((w) => ({ type: 'bank', wordId: w.id }));
+    // 3. six foods to three colour columns
+    const srt = sortItem(kit, cards, rng);
+    parts.sort = srt ? [srt] : [];
+    // 4. a picture and the word with a gap: the blend written. Picture only, as on paper
+    const clear = met.filter((w) => w.blend && (!shape.picBlend || shape.picBlend.includes(w.id)) && !byEar.includes(w));
+    parts.missing = take(clear, 4).map((w) => ({ type: 'missing', wordId: w.id, picOnly: true }));
+    // 5. three dishes, a bank of three
+    const db = dinnerBoard(dinner.dishes, cards, rng);
+    parts.dinner = db ? [db] : [];
+    // 6. the alphabet table, both halves
+    parts.letter = [abcBoard(0, rng), abcBoard(1, rng)];
+    // 7. four sentence starts to four words
+    const mb = shape.matchGroups ? matchBoard(words, cards, shape.matchGroups, rng) : null;
+    parts.sentence = mb ? [mb] : take(met.filter((w) => w.sent), 4).map((w) => ({ type: 'sentence', wordId: w.id }));
+    // 8. a story with yes/no and words written from it (the older short texts when there are no stories)
+    const k = Math.max(0, dayNum - (shape.storyFrom || 1));
+    parts.report = shape.stories && shape.stories.length
+      ? [{ type: 'story', story: k % shape.stories.length }]
+      : [{ type: 'report', passage: Math.max(0, dayNum - report.from) % report.passages.length }];
+    const cols = take(kit.colours, 2), preps = take(kit.preps, 2);
+    parts.extra = [{ type: 'colour', colour: cols[0].en, rev: false }, { type: 'where', prep: preps[0].en },
+      { type: 'colour', colour: cols[1].en, rev: true }, { type: 'where', prep: preps[1].en }];
+    const q = [];
+    MOCK_PARTS.forEach((part) => {
+      const items = parts[part];
+      if (!items.length) return;
+      q.push({ type: 'mockpart', part, n: items.length, phase: 'mock' });
+      for (const x of items) q.push(Object.assign(x, { set: true, phase: 'mock', part }));
+    });
+    return q;
+  }
+
+  /* One entry per answer: t = the drill, p = the mock part, k = what was asked (a word id, a letter, a colour,
+     a dish...), ok. Grouped by drill or by part: right, total, and what was missed. */
+  function summarise(log, by = 't') {
+    const out = {};
+    for (const e of log || []) {
+      const g = e[by];
+      if (!g) continue;
+      const o = out[g] || (out[g] = { right: 0, total: 0, missed: [] });
+      o.total++;
+      if (e.ok) o.right++;
+      else if (e.k != null && !o.missed.includes(e.k)) o.missed.push(e.k);
+    }
+    return out;
+  }
+
+  /* ---------- the training ground: the craftiest opponents get another round ----------
+     Words are ranked by their misses (cards) and by the misses on test-shaped sets (history: summaries of past
+     matches and mocks). Nothing here moves a box: the app plays every item as a set. */
+  const WORD_DRILLS = ['recognise', 'bank', 'whistle', 'missing', 'sentence', 'bankboard', 'matchboard'];
+  const SET_OF = { abc: 'letter', dinnerboard: 'dinner' }; // the test-paper boards count with their simple drill
+  function trickyPool({ words, cards, history = [] }) {
+    const score = {};
+    const add = (k, n) => { score[k] = (score[k] || 0) + n; };
+    for (const w of words) {
+      const c = cards[w.id];
+      if (c && c.seen && c.misses) add(w.id, c.misses + (c.tricky ? 3 : 0));
+    }
+    const sets = { letter: {}, colour: {}, where: {}, dinner: {}, sort: {}, name: {} };
+    for (const h of history) {
+      for (const [t, o] of Object.entries(h || {})) {
+        for (const k of o.missed || []) {
+          if (WORD_DRILLS.includes(t)) add(k, 2);
+          else if (sets[SET_OF[t] || t]) { const g = sets[SET_OF[t] || t]; g[k] = (g[k] || 0) + 1; }
+        }
+      }
+    }
+    const rank = (o) => Object.keys(o).sort((a, b) => o[b] - o[a]);
+    const known = new Set(words.filter((w) => cards[w.id] && cards[w.id].seen).map((w) => w.id));
+    return {
+      words: rank(score).filter((id) => known.has(id)),
+      letters: rank(sets.letter), colours: rank(sets.colour), preps: rank(sets.where),
+      dishes: rank(sets.dinner), foods: rank(sets.sort), name: !!Object.keys(sets.name).length,
+    };
+  }
+
+  const TRAIN_WORDS = 5;
+  const TRAIN_SETS = 8;
+  function buildTraining({ words, cards, history = [], speech, kit, dinner, rng = Math.random }) {
+    const pool = trickyPool({ words, cards, history });
+    const W = Object.fromEntries(words.map((w) => [w.id, w]));
+    // the top of the list, shuffled, so two rounds in a row are not the same round
+    let ids = shuffle(pool.words.slice(0, TRAIN_WORDS + 3), rng).slice(0, TRAIN_WORDS);
+    if (ids.length < 3) { // nothing crafty yet: the newest climbers step in
+      const seen = words.filter((w) => cards[w.id] && cards[w.id].seen && !ids.includes(w.id));
+      const low = shuffle(seen, rng).sort((a, b) => cards[a.id].level - cards[b.id].level);
+      ids = ids.concat(low.slice(0, TRAIN_WORDS - ids.length).map((w) => w.id));
+    }
+    const faces = (w) => {
+      const f = ['recognise', 'bank'];
+      if (!w.phrase && w.blend) f.push('missing');
+      if (!w.phrase && canWhistle(w, speech)) f.push('whistle');
+      if (w.sent) f.push('sentence');
+      return shuffle(f, rng).slice(0, 2);
+    };
+    const t = (x) => Object.assign(x, { set: true, phase: 'train' });
+    const q = [];
+    const later = [];
+    for (const id of ids) {
+      const [a, b] = faces(W[id]);
+      q.push({ type: 'intro', wordId: id, phase: 'train' }, t({ type: a, wordId: id }));
+      if (b) later.push(t({ type: b, wordId: id }));
+    }
+    const sets = [];
+    pool.letters.slice(0, 4).forEach((l, i) => sets.push(t({ type: 'letter', letter: l, rev: i % 2 === 1 })));
+    pool.colours.slice(0, 2).forEach((c, i) => sets.push(t({ type: 'colour', colour: c, rev: i % 2 === 0 })));
+    pool.preps.slice(0, 2).forEach((p) => sets.push(t({ type: 'where', prep: p })));
+    for (const dish of pool.dishes.slice(0, 2)) {
+      const d = dinner.dishes.find((x) => x.dish === dish);
+      if (d) sets.push(t({ type: 'dinner', dish: d.dish, a: shuffle(d.need, rng)[0], wrong: shuffle(d.not, rng).slice(0, 3) }));
+    }
+    if (pool.foods.length) { const srt = sortItem(kit, cards, rng, pool.foods.slice(0, 3)); if (srt) sets.push(t(srt)); }
+    if (pool.name) sets.push(t({ type: 'name' }));
+    return q.concat(shuffle(later.concat(sets.slice(0, TRAIN_SETS)), rng));
+  }
+
+  const Engine = { buildMock, dinnerBoard, abcBoard, matchBoard, MOCK_PARTS, summarise, trickyPool, buildTraining, sortItem, newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, squadFace, shuffle };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;
 })(typeof window !== 'undefined' ? window : globalThis);

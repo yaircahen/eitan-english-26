@@ -274,3 +274,132 @@ test('Kit numbers and Team dinner: the day\'s letter set, then mixed; three dish
   assert.equal(new Set(ds.map((x) => x.dish)).size, 3);
   assert.ok(ds.every((x) => x.set && ['n1', 'n2'].includes(x.a) && x.wrong.length === 3 && x.wrong.every((id) => id.startsWith('x'))));
 });
+
+// ---------- the mock match and the training ground, on the real content ----------
+globalThis.window = globalThis.window || {};
+require('../content.js');
+const CC = globalThis.window.CONTENT;
+const seenAll = (lv = 5) => Object.fromEntries(CC.words.map((w) => [w.id, Object.assign(E.newCard(), { seen: true, level: lv, l3Day: D1, l4Day: D2 })]));
+const SHAPE = { pictures: CC.pictures, picBlend: CC.picBlend, matchGroups: CC.matchGroups, stories: CC.stories, storyFrom: CC.mock.storyFrom };
+const mockOf = (cards, speech = true, dayNum = 7) => E.buildMock({ words: CC.words, cards, dayNum, speech, kit: CC.kit, dinner: CC.dinner, letters: CC.letters, report: CC.report, shape: SHAPE });
+
+test('the mock follows the test paper: the name, the eight exercises in order, extra time; sets only', () => {
+  const q = mockOf(seenAll());
+  assert.deepEqual(q.filter((x) => x.type === 'mockpart').map((x) => x.part), E.MOCK_PARTS);
+  assert.ok(q.filter((x) => x.type !== 'mockpart').every((x) => x.set && x.phase === 'mock' && E.MOCK_PARTS.includes(x.part)));
+  const of = (p) => q.filter((x) => x.part === p && x.type !== 'mockpart');
+  assert.equal(of('name')[0].type, 'name');
+  // 1. five words heard, the blend written
+  const wh = of('whistle');
+  assert.equal(wh.length, 5);
+  assert.ok(wh.every((x) => x.type === 'whistle' && x.write));
+  assert.ok(!wh.some((x) => x.wordId === 'school'), 'the silent ch is never heard');
+  // 2. five pictures, one bank
+  const bb = of('bank');
+  assert.equal(bb.length, 1); assert.equal(bb[0].type, 'bankboard'); assert.equal(new Set(bb[0].ids).size, 5);
+  assert.ok(bb[0].ids.every((id) => CC.pictures.includes(id) && /^[a-z]+$/.test(CC.words.find((w) => w.id === id).en)));
+  // 3. six foods, three columns
+  assert.equal(of('sort')[0].foods.length, 6);
+  // 4. four pictures, no Hebrew, none of the words just heard
+  const ms = of('missing');
+  assert.equal(ms.length, 4);
+  assert.ok(ms.every((x) => x.picOnly && CC.picBlend.includes(x.wordId) && !wh.some((y) => y.wordId === x.wordId)));
+  // 5. three dishes, a bank of three
+  const db = of('dinner')[0];
+  assert.equal(db.type, 'dinnerboard'); assert.equal(db.rows.length, 3); assert.deepEqual(db.bank.slice().sort(), db.rows.map((r) => r.a).sort());
+  // 6. the alphabet, both halves
+  const abc = of('letter');
+  assert.deepEqual(abc.map((x) => x.type + x.half), ['abc0', 'abc1']);
+  assert.deepEqual(abc.map((x) => x.letters.join('')), ['abcdefghijklm', 'nopqrstuvwxyz']);
+  assert.ok(abc.every((x) => x.blanks.length === 9 && new Set(x.blanks.map((b) => b.i)).size === 9), 'a column keeps one of its letters');
+  // 7. four starts, four words, from four groups
+  const mb = of('sentence')[0];
+  assert.equal(mb.type, 'matchboard'); assert.equal(mb.ids.length, 4);
+  assert.equal(new Set(mb.ids.map((id) => CC.matchGroups.findIndex((g) => g.includes(id)))).size, 4);
+  // 8. a story, one per mock day
+  assert.deepEqual([6, 7, 8, 9].map((d) => mockOf(seenAll(), true, d).find((x) => x.type === 'story').story), [0, 1, 2, 3], 'a new story each day, the mega Saturday included');
+  assert.deepEqual(of('extra').map((x) => x.type).sort(), ['colour', 'colour', 'where', 'where']);
+});
+
+test('the mock without a voice: the heard blends become missing letters', () => {
+  const q = mockOf(seenAll(), false);
+  assert.ok(!q.some((x) => x.type === 'whistle'));
+  assert.equal(q.filter((x) => x.part === 'whistle' && x.type === 'missing').length, 5);
+});
+
+test('the dinner board: every bank word is its own dish\'s ingredient and no other dish\'s on the board', () => {
+  const cards = seenAll();
+  for (let n = 0; n < 300; n++) {
+    const b = E.dinnerBoard(CC.dinner.dishes, cards, Math.random);
+    assert.ok(b);
+    const ds = b.rows.map((r) => CC.dinner.dishes.find((d) => d.dish === r.dish));
+    b.rows.forEach((r, i) => {
+      assert.ok(ds[i].need.includes(r.a));
+      assert.ok(ds.every((d, j) => j === i || !d.need.includes(r.a)), `${r.a} fits ${r.dish} only`);
+    });
+    assert.equal(new Set(b.rows.map((r) => r.a)).size, 3);
+  }
+});
+
+test('the stories: every answer is written in its marked sentence; glossary stars match the text', () => {
+  for (const st of CC.stories) {
+    assert.ok(st.text.length >= 10 && st.text.length <= 13, st.title);
+    assert.equal(st.yesno.length, 3); assert.equal(st.fill.length, 3);
+    assert.ok(st.yesno.some((x) => x.a) && st.yesno.some((x) => !x.a));
+    assert.ok(st.fill.some((f) => f.a.length === 2), 'one line has two gaps');
+    for (const f of st.fill) {
+      assert.equal((f.q.match(/___/g) || []).length, f.a.length, f.q);
+      for (const a of f.a) assert.ok([].concat(f.at).some((k) => st.text[k].includes(a)), `${a} in ${st.title}`);
+    }
+    st.glossary.forEach(([e], k) => assert.ok(st.text.some((t) => t.includes(`${e}${'*'.repeat(k + 1)}`)), `${e} is starred`));
+  }
+});
+
+test('from the first mock day the match is the review and the kicks; the name joins the match before that', () => {
+  const cards = seenAll(4);
+  const opts = { words: CC.words, cards, today: '2026-11-22', speech: true, kit: CC.kit, report: CC.report, dinner: CC.dinner, letters: CC.letters, mock: CC.mock, name: true };
+  const d6 = E.buildSession(Object.assign({}, opts, { dayNum: 6, today: '2026-11-21' }));
+  assert.equal(d6.filter((x) => x.type === 'name').length, 1);
+  assert.ok(d6.find((x) => x.type === 'name').set);
+  const d7 = E.buildSession(Object.assign({}, opts, { dayNum: 7 }));
+  assert.ok(d7.length > 0);
+  assert.ok(!d7.some((x) => ['name', 'colour', 'sort', 'where', 'letter', 'dinner', 'report', 'sentence'].includes(x.type)));
+  assert.ok(d7.some((x) => x.type === 'spell'));
+});
+
+test('summarise: right, total and what was missed, by drill or by part', () => {
+  const log = [{ t: 'letter', p: 'letter', k: 'b', ok: false }, { t: 'letter', p: 'letter', k: 'd', ok: true },
+    { t: 'letter', p: 'letter', k: 'b', ok: false }, { t: 'colour', p: 'extra', k: 'grey', ok: true }];
+  assert.deepEqual(E.summarise(log), { letter: { right: 1, total: 3, missed: ['b'] }, colour: { right: 1, total: 1, missed: [] } });
+  assert.deepEqual(Object.keys(E.summarise(log, 'p')), ['letter', 'extra']);
+});
+
+test('the training ground: the craftiest words first, missed sets come back, nothing moves a box', () => {
+  const cards = seenAll();
+  Object.assign(cards.spinach, { misses: 4, tricky: true });
+  cards.cheese.misses = 2; cards.chair.misses = 1;
+  const history = [{ abc: { right: 16, total: 18, missed: ['b', 'q'] }, where: { right: 3, total: 4, missed: ['near'] }, sentence: { right: 4, total: 5, missed: ['kitchen'] } }];
+  const pool = E.trickyPool({ words: CC.words, cards, history });
+  assert.equal(pool.words[0], 'spinach');
+  assert.deepEqual(pool.words.slice(0, 4).sort(), ['chair', 'cheese', 'kitchen', 'spinach']);
+  assert.deepEqual(pool.letters, ['b', 'q']);
+  assert.deepEqual(pool.preps, ['near']);
+  const q = E.buildTraining({ words: CC.words, cards, history, speech: true, kit: CC.kit, dinner: CC.dinner });
+  const intros = q.filter((x) => x.type === 'intro').map((x) => x.wordId);
+  assert.ok(intros.includes('spinach') && intros.includes('cheese') && intros.includes('kitchen'));
+  assert.ok(q.filter((x) => x.type !== 'intro').every((x) => x.set && x.phase === 'train'));
+  assert.deepEqual(q.filter((x) => x.type === 'letter').map((x) => x.letter).sort(), ['b', 'q']);
+  assert.equal(q.filter((x) => x.type === 'where')[0].prep, 'near');
+  for (const id of intros) {
+    assert.ok(q.indexOf(q.find((x) => x.type === 'intro' && x.wordId === id)) < q.indexOf(q.find((x) => x.type !== 'intro' && x.wordId === id)), 'the cue comes before the turn');
+  }
+});
+
+test('the training ground with no misses yet: the lowest climbers step in', () => {
+  const cards = seenAll(5);
+  cards.fruit.level = 3; cards.share.level = 4;
+  const q = E.buildTraining({ words: CC.words, cards, history: [], speech: true, kit: CC.kit, dinner: CC.dinner });
+  const intros = q.filter((x) => x.type === 'intro').map((x) => x.wordId);
+  assert.ok(intros.length >= 3);
+  assert.ok(intros.includes('fruit') && intros.includes('share'));
+});

@@ -17,7 +17,7 @@ const shots = process.argv[2];
   });
   const page = await ctx.newPage();
   const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) => errors.push(e.message + ' @ ' + (e.stack || '').split('\n').slice(1, 4).join(' / ')));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   const shot = async (name) => { if (shots) await page.screenshot({ path: `${shots}/${name}.png` }); };
   const type = async (s) => { for (const ch of s) await page.click(`.key[data-k="${ch}"]`); };
@@ -30,6 +30,9 @@ const shots = process.argv[2];
   for (const d of dinners) assert.ok(!d.need.some((id) => d.not.includes(id)));
   const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
   let sortMiss = false;
+  let letterMiss = false, missedLetter = null, abcMiss = false;
+  const stories = await page.evaluate(() => window.CONTENT.stories);
+  const cur = async () => { const sv = await load(); const r = sv.session || sv.mock || sv.train; return r.queue[r.pos]; };
   const byHe = Object.fromEntries(words.map((w) => [w.he, w]));
 
   // setup: a wrong name first, then the right one
@@ -75,7 +78,8 @@ const shots = process.argv[2];
       if (await page.$('.stage.report')) {
         faces.add('report');
         const sv = await load();
-        const p = passages[sv.session.queue[sv.session.pos].passage];
+        const r = sv.session || sv.mock || sv.train;
+        const p = passages[r.queue[r.pos].passage];
         const qno = await page.textContent('#qno');
         const text = (await page.textContent('#rq')).replace(/\s+/g, ' ').trim();
         const yn = p.yesno.find((x) => x.q === text);
@@ -91,16 +95,90 @@ const shots = process.argv[2];
       }
       if (await page.$('.kit-sort')) {
         faces.add('sort'); await once('sort', '31-sort');
-        const food = (await page.textContent('#food')).trim();
-        const col = Object.keys(kit.sort).find((c) => kit.sort[c].some((id) => words.find((w) => w.id === id).en === food));
-        const first = !sortMiss; sortMiss = true; // the first food of the first sort goes to a wrong shelf
-        const cols = await page.$$eval('.shelf', (els) => els.map((x) => x.dataset.c));
-        await page.click(`.shelf[data-c="${first ? cols.find((c) => c !== col) : col}"]`);
-        if (first) { await page.waitForTimeout(300); await shot('33-sort-miss'); }
-        await page.waitForFunction((f) => document.getElementById('food').textContent.trim() !== f || document.getElementById('ok'), food);
+        const it = await cur();
+        const first = !sortMiss; sortMiss = true; // the first food of the first sort goes to a wrong column
+        for (const f of it.foods) {
+          await page.click(`.food[data-id="${f.id}"]`);
+          const wrong = first && f === it.foods[0];
+          await page.click(`.shelf[data-c="${wrong ? it.cols.find((c) => c !== f.col) : f.col}"]`);
+          if (wrong) { await page.waitForTimeout(300); await shot('33-sort-miss'); }
+        }
+        await page.waitForSelector('#ok'); await once('sorted', '32-sort-done');
         continue;
       }
-      if (await page.$('.kit-dinner')) {
+      // the test paper's boards (the mock)
+      if (await page.$('.pics')) {
+        faces.add('bankboard'); await once('bb', '50-mock-bankboard');
+        for (const id of (await cur()).ids) { await type(words.find((w) => w.id === id).en); await page.click('[data-k="ENTER"]'); }
+        await shot('51-mock-bankboard-done');
+        continue;
+      }
+      if (await page.$('.lines')) {
+        faces.add('dinnerboard'); await once('db', '52-mock-dinnerboard');
+        for (const r of (await cur()).rows) { await type(r.a); await page.click('[data-k="ENTER"]'); }
+        continue;
+      }
+      if (await page.$('table.abc')) {
+        faces.add('abc'); await once('abc', '53-mock-abc');
+        const it = await cur();
+        const order = it.blanks.slice().sort((a, b) => a.i - b.i || (a.row === 'cap' ? -1 : 1));
+        for (const b of order) {
+          const l = it.letters[b.i];
+          if (abcMiss) { abcMiss = false; missedLetter = l; await type(l === 'z' ? 'y' : 'z'); }
+          else await type(l);
+          await page.click('[data-k="ENTER"]');
+        }
+        await once('abcdone', '54-mock-abc-done');
+        continue;
+      }
+      if (await page.$('.match2')) {
+        faces.add('matchboard'); await once('mb', '55-mock-matchboard');
+        const it = await cur();
+        // one wrong pair first: the words stay until they find their sentence
+        await page.click(`.mword[data-id="${it.ids[0]}"]`); await page.click(`.mstart[data-id="${it.ids[1]}"]`);
+        await page.waitForTimeout(100); await shot('56-mock-match-miss');
+        for (const id of it.ids) { await page.click(`.mword[data-id="${id}"]`); await page.click(`.mstart[data-id="${id}"]`); }
+        await once('mbdone', '57-mock-match-done');
+        continue;
+      }
+      if (await page.$('.storygrid')) {
+        faces.add('story');
+        const it = await cur();
+        const stc = stories[it.story];
+        for (const q of stc.yesno) {
+          await page.waitForFunction((t) => document.getElementById('rq').textContent === t, q.q);
+          await once('syn', '58-mock-story-yesno');
+          await page.click(`#qin .opt[data-v="${q.a ? 'yes' : 'no'}"]`);
+        }
+        for (const [k, q] of stc.fill.entries()) {
+          await page.waitForSelector('#qin .kb');
+          if (k === 0) {
+            await shot('59-mock-story-fill');
+            await type('zzz'); await page.click('[data-k="ENTER"]'); // a miss: the sentence lights up
+            await page.waitForSelector('#rnext'); assert.ok(await page.$('.sen.lit')); await shot('60-mock-story-miss');
+            await page.click('#rnext'); continue;
+          }
+          for (const a of q.a) { await type(a.toLowerCase()); await page.click('[data-k="ENTER"]'); }
+          if (q.a.length > 1) await once('s2', '61-mock-story-two-gaps');
+        }
+        await page.waitForSelector('#ok');
+        continue;
+      }
+      if (await page.$('.whistle-btn') && await page.$('.typed')) {
+        faces.add('whistlewrite'); await once('ww', '62-mock-whistle-write');
+        { const id = (await cur()).wordId; await type(words.find((w) => w.id === id).blend); } await page.click('[data-k="ENTER"]');
+        await page.waitForSelector('.fb'); await page.click('.fb'); continue;
+      }
+      if (await page.$('.typed .slot') && !(await page.$('.cue .he'))) {
+        faces.add('picmissing'); await once('pm', '63-mock-missing-picture-only');
+        { const id = (await cur()).wordId; await type(words.find((w) => w.id === id).blend); } await page.click('[data-k="ENTER"]');
+        await page.waitForSelector('.fb'); await page.click('.fb'); continue;
+      }
+      if (await page.$('.namebox')) {
+        faces.add('name'); await once('name', '43-name');
+        await type('eitan'); assert.equal((await page.textContent('#nb')).trim(), 'Eitan');
+        await page.click('[data-k="ENTER"]');
+      } else if (await page.$('.kit-dinner')) {
         faces.add('dinner'); await once('dinner', '39-dinner');
         const dish = await page.getAttribute('#dsent', 'data-dish');
         const d = dinners.find((x) => x.dish === dish);
@@ -113,6 +191,11 @@ const shots = process.argv[2];
         faces.add('letter');
         const cue = (await page.textContent('#lcue')).trim();
         await once(cue === cue.toUpperCase() ? 'lcap' : 'lsmall', cue === cue.toUpperCase() ? '40-letter-capital' : '41-letter-small');
+        if (letterMiss) { // one wrong pair, to see it come back on the training ground
+          letterMiss = false; missedLetter = cue.toLowerCase();
+          await page.click(`.opt[data-l]:not([data-l="${missedLetter}"])`);
+          await page.waitForSelector('.fb-slip'); await page.click('#fbnext'); continue;
+        }
         await page.click(`.opt[data-l="${cue.toLowerCase()}"]`);
       } else if (await page.$('.kit-colour')) {
         faces.add('colour');
@@ -281,6 +364,96 @@ const shots = process.argv[2];
   const f6 = await playMatch();
   assert.ok(f6.has('dinner') && f6.has('letter'));
   await shot('42-career-day6');
+
+  assert.ok(f6.has('name'), 'his name is typed in the match');
+
+  // day 6 is a mega Saturday: after the match, a bonus friendly in the test's shape and a longer training ground
+  assert.match(await page.textContent('.match'), /שבת של מגה/);
+  assert.match(await page.textContent('#train'), /מתוך 45 דקות/);
+  await shot('64-career-mega');
+  const cards6 = JSON.stringify((await load()).cards);
+  await page.click('#mock');
+  assert.match(await page.textContent('.kicker'), /Hapoel Chicken/);
+  await playMatch();
+  st = await load();
+  assert.equal(JSON.stringify(st.cards), cards6, 'the bonus friendly moves no box');
+  assert.ok(st.mocks['2026-11-21'].total > 40);
+  assert.equal(await page.$('#mock'), null, 'one bonus friendly');
+  await page.goto(BASE + '?day=2026-11-20');
+  assert.ok(!(await page.textContent('.match')).includes('מגה'), 'a normal day has no mega');
+
+  // day 7: the match is the review and the kicks; then the first mock, the test's exercises in order
+  await page.goto(BASE + '?day=2026-11-22');
+  assert.equal(await page.$('#mock'), null, 'the mock waits for the match');
+  assert.ok(await page.$('#train[disabled]'), 'the training ground waits for the match');
+  await page.click('#go');
+  const q7 = (await load()).session.queue;
+  assert.ok(!q7.some((x) => ['colour', 'sort', 'where', 'letter', 'dinner', 'report', 'sentence', 'name'].includes(x.type)), 'the sets live in the mock now');
+  await playMatch();
+  assert.match(await page.textContent('.match'), /משחק הכנה נגד/);
+  await shot('44-career-mock');
+  st = await load();
+  const cards7 = JSON.stringify(st.cards), points7 = st.points;
+  await page.click('#mock');
+  await page.waitForSelector('.mockpart'); await shot('45-mock-part');
+  const qm = (await load()).mock.queue;
+  assert.deepEqual(qm.filter((x) => x.type === 'mockpart').map((x) => x.part), ['name', 'whistle', 'bank', 'sort', 'missing', 'dinner', 'letter', 'sentence', 'report', 'extra']);
+  abcMiss = true;
+  const fm = await playMatch();
+  for (const f of ['name', 'whistlewrite', 'bankboard', 'sort', 'picmissing', 'dinnerboard', 'abc', 'matchboard', 'story', 'colour', 'where']) assert.ok(fm.has(f), `the mock has ${f}`);
+  st = await load();
+  assert.equal(JSON.stringify(st.cards), cards7, 'a mock never moves a box');
+  assert.ok(st.points > points7, 'a mock brings points');
+  const m7 = st.mocks['2026-11-22'];
+  assert.ok(m7 && m7.total > 40, `mock total ${m7 && m7.total}`);
+  assert.equal(m7.total - m7.right, 3, 'one letter, one match pair and one story line missed');
+  assert.deepEqual(m7.parts.letter.missed, [missedLetter]);
+  assert.equal(m7.parts.sentence.missed.length, 1);
+  assert.equal(m7.parts.report.missed.length, 1);
+  assert.equal(st.mock, null);
+  assert.match(await page.textContent('.match'), /שוחק: \d+ שערים/);
+  assert.equal(Object.keys(st.album).length >= 3, true);
+
+  // the training ground: the missed pair comes back; no box, no points, no pack
+  const album7 = JSON.stringify(st.album), points7b = st.points;
+  await page.click('#train');
+  await page.waitForSelector('.stage'); await shot('46-train-start');
+  const qt = (await load()).train.queue;
+  assert.ok(qt.some((x) => x.type === 'letter' && x.letter === missedLetter), 'the missed pair is trained');
+  assert.ok(qt.filter((x) => x.type !== 'trainstart' && x.type !== 'intro').every((x) => x.set));
+  await playMatch();
+  st = await load();
+  assert.equal(JSON.stringify(st.cards), cards7, 'the training ground never moves a box');
+  assert.equal(st.points, points7b, 'no points on the training ground');
+  assert.equal(JSON.stringify(st.album), album7, 'no pack on the training ground');
+  assert.ok(st.train.rounds === 1 && st.train.total > 0);
+  // the cap: training minutes at the cap close it for the day
+  await page.evaluate(() => { const k = 'eitan-english-26.save.v1'; const v = JSON.parse(localStorage.getItem(k)); v.train.ms = v.settings.capMin * 60000; localStorage.setItem(k, JSON.stringify(v)); });
+  await page.goto(BASE + '?day=2026-11-22');
+  assert.ok(await page.$('#train[disabled]'));
+  assert.match(await page.textContent('#train'), /הסתיים/);
+  await shot('47-career-after-mock');
+
+  // the coach sees the mock, exercise by exercise, and what the training ground works on
+  await longPress();
+  const coachText = await page.textContent('.coach');
+  assert.match(coachText, /משחק הכנה: \d+\/\d+/);
+  assert.match(coachText, /6\. זוגות אותיות/);
+  assert.match(coachText, new RegExp(`${missedLetter.toUpperCase()}${missedLetter}`));
+  await shot('48-coach-mock');
+  await page.click('#back');
+
+  // day 9: the Clásico; day 10: the test, no mock
+  await page.goto(BASE + '?day=2026-11-24');
+  await page.click('#go'); await playMatch();
+  assert.match(await page.textContent('.match'), /הקלאסיקו/);
+  await page.click('#mock');
+  assert.match(await page.textContent('.kicker'), /Real Madrid/);
+  await shot('49-clasico');
+  await playMatch();
+  assert.equal((await load()).mocks['2026-11-24'].kind, 'clasico');
+  await page.goto(BASE + '?day=2026-11-25');
+  assert.equal(await page.$('#mock'), null);
 
   assert.deepEqual(errors, []);
   await browser.close();
