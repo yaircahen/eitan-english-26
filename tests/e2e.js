@@ -367,6 +367,21 @@ const shots = process.argv[2];
 
   assert.ok(f6.has('name'), 'his name is typed in the match');
 
+  // day 6 is a mega Saturday: after the match, a bonus friendly in the test's shape and a longer training ground
+  assert.match(await page.textContent('.match'), /שבת של מגה/);
+  assert.match(await page.textContent('#train'), /מתוך 45 דקות/);
+  await shot('64-career-mega');
+  const cards6 = JSON.stringify((await load()).cards);
+  await page.click('#mock');
+  assert.match(await page.textContent('.kicker'), /Hapoel Chicken/);
+  await playMatch();
+  st = await load();
+  assert.equal(JSON.stringify(st.cards), cards6, 'the bonus friendly moves no box');
+  assert.ok(st.mocks['2026-11-21'].total > 40);
+  assert.equal(await page.$('#mock'), null, 'one bonus friendly');
+  await page.goto(BASE + '?day=2026-11-20');
+  assert.ok(!(await page.textContent('.match')).includes('מגה'), 'a normal day has no mega');
+
   // day 7: the match is the review and the kicks; then the first mock, the test's exercises in order
   await page.goto(BASE + '?day=2026-11-22');
   assert.equal(await page.$('#mock'), null, 'the mock waits for the match');

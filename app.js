@@ -250,7 +250,9 @@
     else if (mk && !state.mocks[t]) {
       mockHtml = mk === 'clasico'
         ? `<p>הערב: הקלאסיקו נגד ${en('Real Madrid')}. שמונה תרגילים, בדיוק כמו בדף המבחן.</p><button class="btn btn-go glow" id="mock">עולים לקלאסיקו</button>`
-        : `<p>משחק הכנה נגד ${en(rivalOf(t))}: שמונה תרגילים, בדיוק כמו בדף המבחן.</p><button class="btn btn-go glow" id="mock">עולים למשחק ההכנה</button>`;
+        : isMega(t)
+          ? `<p class="flag">שבת של מגה! מי שרוצה עוד: משחק ידידות בונוס נגד ${en(rivalOf(t))}, שמונה תרגילים בדיוק כמו בדף המבחן, ומגרש האימונים פתוח היום עד ${trainCap(t)} דקות.</p><button class="btn btn-go glow" id="mock">עולים למשחק הבונוס</button>`
+          : `<p>משחק הכנה נגד ${en(rivalOf(t))}: שמונה תרגילים, בדיוק כמו בדף המבחן.</p><button class="btn btn-go glow" id="mock">עולים למשחק ההכנה</button>`;
     } else if (mk) mockHtml = `<p>${mk === 'clasico' ? 'הקלאסיקו' : 'משחק ההכנה'} שוחק: ${state.mocks[t].right} שערים. המגרש נפתח שוב מחר.</p>`;
 
     let match;
@@ -267,7 +269,7 @@
     }
     const ts = trainState(t, !done && !!(s || hidden || due));
     const trainBtn = ts === 'closed' ? '' : `<button class="albumbtn trainbtn" id="train" ${ts === 'open' ? '' : 'disabled'}><b>מגרש האימונים</b><span>${
-      ts === 'later' ? 'נפתח אחרי המשחק של היום' : ts === 'over' ? 'האימון של היום הסתיים. חוזרים מחר' : `${trainMinutes(t)} מתוך ${state.settings.capMin} דקות היום`}</span></button>`;
+      ts === 'later' ? 'נפתח אחרי המשחק של היום' : ts === 'over' ? 'האימון של היום הסתיים. חוזרים מחר' : `${trainMinutes(t)} מתוך ${trainCap(t)} דקות היום`}</span></button>`;
 
     const cols = [1, 2, 3, 4, 5].map((lv) => {
       const ws = C.words.filter((w) => state.cards[w.id].seen && state.cards[w.id].level === lv);
@@ -406,11 +408,16 @@
   }
 
   /* ---------- the mock match (days 7 to 9): the test's eight exercises in order. Sets only: no box moves, no pack ---------- */
+  const isMega = (t) => C.mock.mega.days.includes(dayNum(t));
   function mockKind(t) {
     const d = dayNum(t), m = C.mock;
+    if (isMega(t)) return 'friendly'; // the bonus friendly of a mega day
     return d < m.from || d > m.until ? null : d >= m.clasico ? 'clasico' : 'friendly';
   }
-  const rivalOf = (t) => (mockKind(t) === 'clasico' ? 'Real Madrid' : C.mock.friendlies[(dayNum(t) - C.mock.from) % C.mock.friendlies.length]);
+  const rivalOf = (t) => (mockKind(t) === 'clasico' ? 'Real Madrid' : isMega(t) ? C.mock.mega.rival
+    : C.mock.friendlies[Math.max(0, dayNum(t) - C.mock.from) % C.mock.friendlies.length]);
+  // the training ground's minutes today: the coach's cap, longer on a mega day (a cap of 0 keeps it closed)
+  const trainCap = (t) => (state.settings.capMin > 0 && isMega(t) ? Math.max(state.settings.capMin, C.mock.mega.trainCap) : state.settings.capMin);
   const newRun = (mode, t, queue) => ({ mode, day: t, queue, pos: 0, points: 0, combo: 0, bestCombo: 0, right: 0, total: 0, ms: 0, log: [] });
   function startMock() {
     const t = today();
@@ -418,7 +425,7 @@
       state.mock = Object.assign(newRun('mock', t, E.buildMock({
         words: C.words, cards: state.cards, dayNum: dayNum(t), speech: Voice.ok,
         kit: C.kit, dinner: C.dinner, letters: C.letters, report: C.report,
-        shape: { pictures: C.pictures, picBlend: C.picBlend, matchGroups: C.matchGroups, stories: C.stories, storyFrom: C.mock.from },
+        shape: { pictures: C.pictures, picBlend: C.picBlend, matchGroups: C.matchGroups, stories: C.stories, storyFrom: C.mock.storyFrom },
       })), { kind: mockKind(t), rival: rivalOf(t) });
       save();
     }
@@ -456,7 +463,7 @@
       <h1>${cl ? 'הקלאסיקו שלנו!' : 'ניצחון במשחק ההכנה!'}</h1>
       <div class="score"><div><b>${s.right}</b><span>שערים</span></div><div><b>${s.points}</b><span>נקודות</span></div><div><b>${s.bestCombo}</b><span>הרצף הכי ארוך</span></div></div>
       <p class="lead">${cl ? `${en('Real Madrid')} מבקשת לבדוק ב־VAR. אין מה לבדוק.` : `${en(s.rival)} ביקשו לשמור את הכדור למזכרת.`}</p>
-      <p class="lead">${en(state.profile.idol)} כבר מחכה ליום המבחן. המגרש נפתח שוב מחר.</p>
+      <p class="lead">${en(state.profile.idol)} כבר מחכה ליום המבחן. ${isMega(s.day) && trainCap(s.day) > 0 ? 'ומגרש האימונים עוד פתוח היום.' : 'המגרש נפתח שוב מחר.'}</p>
       <button class="btn btn-go glow" id="ok">חזרה לקריירה</button>
     </div></section>`, 'scr-play');
     on('#ok', () => { Sfx.tap(); career(); });
@@ -469,7 +476,7 @@
     if (!(state.settings.capMin > 0)) return 'closed';
     if (matchWaiting) return 'later';
     const tr = state.train && state.train.day === t ? state.train : null;
-    return tr && tr.ms >= state.settings.capMin * 60000 ? 'over' : 'open';
+    return tr && tr.ms >= trainCap(t) * 60000 ? 'over' : 'open';
   }
   const pastSets = () => Object.values(state.days).map((d) => d.sets).concat(Object.values(state.mocks).map((m) => m.sets)).filter(Boolean);
   function startTraining() {
@@ -501,7 +508,7 @@
   function trainEnd() {
     const s = run;
     clock();
-    const over = s.ms >= state.settings.capMin * 60000;
+    const over = s.ms >= trainCap(s.day) * 60000;
     s.pos = s.queue.length; // the round is closed
     run = null;
     save();
@@ -549,7 +556,7 @@
   function play() {
     const s = run;
     locked = false;
-    if (s.mode === 'train' && s.ms >= state.settings.capMin * 60000) return trainEnd();
+    if (s.mode === 'train' && s.ms >= trainCap(s.day) * 60000) return trainEnd();
     while (s.pos < s.queue.length) { // a shoot-out kick is only for a word that is in the squad
       const it = s.queue[s.pos];
       if (it.phase === 'shootout' && it.wordId && state.cards[it.wordId].level < 3) s.pos++;
@@ -1321,7 +1328,7 @@
       <div class="score"><div><b>${s.points}</b><span>נקודות היום</span></div><div><b>${s.bestCombo}</b><span>הרצף הכי ארוך</span></div><div><b>${up.length}</b><span>מילים עלו שלב</span></div></div>
       ${up.length ? `<div class="chips center">${up.map((id) => `<span class="chip">${WORD[id].emoji} ${en(WORD[id].en)}</span>`).join('')}</div>` : ''}
       ${st > before ? `<p class="lead flag">🚩 שלב חדש בקריירה: ${C.stages[st].name}</p>` : ''}
-      <p class="lead">${en(state.profile.idol)} מרים את סרט הקפטן לכבודך. ${mockKind(s.day) && !state.mocks[s.day] ? 'ומשחק ההכנה כבר מחכה במנהרה.' : 'המגרש נפתח שוב מחר.'}</p>
+      <p class="lead">${en(state.profile.idol)} מרים את סרט הקפטן לכבודך. ${mockKind(s.day) && !state.mocks[s.day] ? (isMega(s.day) ? 'ומי שרוצה עוד: משחק בונוס מחכה במנהרה.' : 'ומשחק ההכנה כבר מחכה במנהרה.') : 'המגרש נפתח שוב מחר.'}</p>
       <button class="btn btn-go glow" id="ok">פותחים חבילה</button>
     </div></section>`, 'scr-play');
     on('#ok', () => { Sfx.tap(); packScreen(pack, 'חבילת הסיום', career); });
@@ -1397,7 +1404,7 @@
       const m = state.mocks[k];
       return `<h3><span dir="ltr">${k.slice(5)}</span> · ${m.kind === 'clasico' ? 'הקלאסיקו' : 'משחק הכנה'}: ${m.right}/${m.total} (${pct(m.right, m.total)}%), ${m.minutes} דקות</h3>
         ${setsTable(m.parts, '', E.MOCK_PARTS)}`;
-    }).join('') : `<p>${mockKind(t) || dayNum(t) < C.mock.from ? 'משחק ההכנה הראשון נפתח ביום ראשון 22.11, אחרי המשחק של היום.' : 'לא שוחקו משחקי הכנה.'}</p>`;
+    }).join('') : `<p>${isMega(t) ? `היום יום מגה: אחרי המשחק של היום נפתחים משחק ידידות בונוס בנוסח המבחן ומגרש אימונים עד ${trainCap(t)} דקות. הכול לפי רצונו, בלי חובה.` : mockKind(t) || dayNum(t) < C.mock.from ? 'משחק ההכנה הראשון נפתח ביום ראשון 22.11, אחרי המשחק של היום.' : 'לא שוחקו משחקי הכנה.'}</p>`;
     const pool = E.trickyPool({ words: C.words, cards: state.cards, history: pastSets() });
     const poolText = [pool.words.slice(0, 8).map((id) => en(WORD[id].en)).join(', '),
       pool.letters.length ? `אותיות: ${pool.letters.map(keyName).join(' ')}` : '',
@@ -1418,7 +1425,7 @@
       </div>
       <div class="panel"><h2>משחקי ההכנה (תרגילי המבחן לפי הסדר)</h2>${mocksHtml}</div>
       <div class="panel"><h2>מגרש האימונים</h2>
-        <p>היום: ${trainMinutes(t)} דקות מתוך ${state.settings.capMin}. לא מזיז מילים בלוח ולא נותן נקודות או חבילות.</p>
+        <p>היום: ${trainMinutes(t)} דקות מתוך ${trainCap(t)}${isMega(t) ? ' (יום מגה)' : ''}. לא מזיז מילים בלוח ולא נותן נקודות או חבילות.</p>
         <p>מה מתאמנים שם עכשיו (לפי הטעויות במשחקים ובמשחקי ההכנה): ${poolText || 'עוד אין טעויות. מתאמנים על המילים החדשות ביותר.'}</p>
       </div>
       <div class="panel"><h2>הגדרות</h2>

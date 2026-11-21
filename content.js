@@ -205,6 +205,24 @@ window.CONTENT = {
       ],
     },
     {
+      title: 'Breakfast for Mom',
+      text: ['It is Saturday morning.', 'Yoav and his sister Maya want to make breakfast** for Mom.', 'They go to the kitchen.',
+        'Yoav wants to make an omelette with eggs and cheese.', 'Oh no! Maya drops* the eggs.', 'Maya is sad.',
+        'Yoav says: We have bread and jam!', 'They make sandwiches with jam.', 'Maya makes coffee for Mom.',
+        'They put the food on the table.', 'Mom comes and says: Wow! Thank you!', 'Mom is very happy.'],
+      glossary: [['drops', 'מפילה'], ['breakfast', 'ארוחת בוקר']],
+      yesno: [
+        { q: 'Yoav and Maya are in the kitchen.', a: true, at: 2 },
+        { q: 'They make an omelette.', a: false, at: [4, 7] },
+        { q: 'Mom likes the breakfast.', a: true, at: 10 },
+      ],
+      fill: [
+        { q: "Yoav's sister is ___.", a: ['Maya'], at: 1 },
+        { q: 'They make sandwiches with ___.', a: ['jam'], at: 7 },
+        { q: 'Maya makes ___ for ___.', a: ['coffee', 'Mom'], at: 8 },
+      ],
+    },
+    {
       title: 'After the Match',
       text: ['Omer and his friends play football.', 'After the match the children are very hungry.', 'Omer\'s mom takes them to a restaurant.',
         'Omer wants a hamburger and chips.', 'His friend Dana doesn\'t like meat.', 'She eats pizza with tomatoes.',
@@ -248,6 +266,10 @@ window.CONTENT = {
      of the exercise on the test paper (none for the name at the top of the page and for extra time). */
   mock: {
     from: 7, until: 9, clasico: 9,
+    /* Mega days (owner, 21 Nov): a free Saturday. After the day's match, if he wants more, a bonus friendly in the
+       test's shape opens a day early, and the training ground runs to trainCap minutes (unless the coach set 0). */
+    mega: { days: [6], rival: 'Hapoel Chicken', trainCap: 45 },
+    storyFrom: 6, // the first day a mock can open: the stories go in turn from here
     friendlies: ['Maccabi Milkshake', 'Inter Sandwich'],
     parts: {
       name: { title: 'השם בראש הדף', line: 'כמו בכל דף מבחן: קודם כל השם באנגלית.' },

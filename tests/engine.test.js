@@ -280,7 +280,7 @@ globalThis.window = globalThis.window || {};
 require('../content.js');
 const CC = globalThis.window.CONTENT;
 const seenAll = (lv = 5) => Object.fromEntries(CC.words.map((w) => [w.id, Object.assign(E.newCard(), { seen: true, level: lv, l3Day: D1, l4Day: D2 })]));
-const SHAPE = { pictures: CC.pictures, picBlend: CC.picBlend, matchGroups: CC.matchGroups, stories: CC.stories, storyFrom: CC.mock.from };
+const SHAPE = { pictures: CC.pictures, picBlend: CC.picBlend, matchGroups: CC.matchGroups, stories: CC.stories, storyFrom: CC.mock.storyFrom };
 const mockOf = (cards, speech = true, dayNum = 7) => E.buildMock({ words: CC.words, cards, dayNum, speech, kit: CC.kit, dinner: CC.dinner, letters: CC.letters, report: CC.report, shape: SHAPE });
 
 test('the mock follows the test paper: the name, the eight exercises in order, extra time; sets only', () => {
@@ -317,7 +317,7 @@ test('the mock follows the test paper: the name, the eight exercises in order, e
   assert.equal(mb.type, 'matchboard'); assert.equal(mb.ids.length, 4);
   assert.equal(new Set(mb.ids.map((id) => CC.matchGroups.findIndex((g) => g.includes(id)))).size, 4);
   // 8. a story, one per mock day
-  assert.deepEqual([7, 8, 9].map((d) => mockOf(seenAll(), true, d).find((x) => x.type === 'story').story), [0, 1, 2]);
+  assert.deepEqual([6, 7, 8, 9].map((d) => mockOf(seenAll(), true, d).find((x) => x.type === 'story').story), [0, 1, 2, 3], 'a new story each day, the mega Saturday included');
   assert.deepEqual(of('extra').map((x) => x.type).sort(), ['colour', 'colour', 'where', 'where']);
 });
 
