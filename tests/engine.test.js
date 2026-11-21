@@ -280,35 +280,79 @@ globalThis.window = globalThis.window || {};
 require('../content.js');
 const CC = globalThis.window.CONTENT;
 const seenAll = (lv = 5) => Object.fromEntries(CC.words.map((w) => [w.id, Object.assign(E.newCard(), { seen: true, level: lv, l3Day: D1, l4Day: D2 })]));
-const mockOf = (cards, speech = true, dayNum = 7) => E.buildMock({ words: CC.words, cards, dayNum, speech, kit: CC.kit, dinner: CC.dinner, letters: CC.letters, report: CC.report });
+const SHAPE = { pictures: CC.pictures, picBlend: CC.picBlend, matchGroups: CC.matchGroups, stories: CC.stories, storyFrom: CC.mock.from };
+const mockOf = (cards, speech = true, dayNum = 7) => E.buildMock({ words: CC.words, cards, dayNum, speech, kit: CC.kit, dinner: CC.dinner, letters: CC.letters, report: CC.report, shape: SHAPE });
 
-test('the mock: the name, then the eight exercises in the test\'s order, then extra time; sets only', () => {
+test('the mock follows the test paper: the name, the eight exercises in order, extra time; sets only', () => {
   const q = mockOf(seenAll());
-  const parts = q.filter((x) => x.type === 'mockpart').map((x) => x.part);
-  assert.deepEqual(parts, E.MOCK_PARTS);
+  assert.deepEqual(q.filter((x) => x.type === 'mockpart').map((x) => x.part), E.MOCK_PARTS);
   assert.ok(q.filter((x) => x.type !== 'mockpart').every((x) => x.set && x.phase === 'mock' && E.MOCK_PARTS.includes(x.part)));
   const of = (p) => q.filter((x) => x.part === p && x.type !== 'mockpart');
   assert.equal(of('name')[0].type, 'name');
+  // 1. five words heard, the blend written
   const wh = of('whistle');
-  assert.equal(wh.length, 6);
-  assert.deepEqual(['ch', 'sh'].map((b) => wh.filter((x) => CC.words.find((w) => w.id === x.wordId).blend === b).length), [3, 3]);
-  assert.ok(!wh.some((x) => x.wordId === 'school'), 'the silent ch is never whistled');
-  assert.ok(of('missing').every((x) => !wh.some((y) => y.wordId === x.wordId)), 'other words for the missing letters');
+  assert.equal(wh.length, 5);
+  assert.ok(wh.every((x) => x.type === 'whistle' && x.write));
+  assert.ok(!wh.some((x) => x.wordId === 'school'), 'the silent ch is never heard');
+  // 2. five pictures, one bank
+  const bb = of('bank');
+  assert.equal(bb.length, 1); assert.equal(bb[0].type, 'bankboard'); assert.equal(new Set(bb[0].ids).size, 5);
+  assert.ok(bb[0].ids.every((id) => CC.pictures.includes(id) && /^[a-z]+$/.test(CC.words.find((w) => w.id === id).en)));
+  // 3. six foods, three columns
   assert.equal(of('sort')[0].foods.length, 6);
-  assert.equal(of('dinner').length, 3);
-  assert.equal(of('letter').length, 8);
-  assert.equal(of('sentence').length, 5);
-  assert.equal(of('report').length, 1);
+  // 4. four pictures, no Hebrew, none of the words just heard
+  const ms = of('missing');
+  assert.equal(ms.length, 4);
+  assert.ok(ms.every((x) => x.picOnly && CC.picBlend.includes(x.wordId) && !wh.some((y) => y.wordId === x.wordId)));
+  // 5. three dishes, a bank of three
+  const db = of('dinner')[0];
+  assert.equal(db.type, 'dinnerboard'); assert.equal(db.rows.length, 3); assert.deepEqual(db.bank.slice().sort(), db.rows.map((r) => r.a).sort());
+  // 6. the alphabet, both halves
+  const abc = of('letter');
+  assert.deepEqual(abc.map((x) => x.type + x.half), ['abc0', 'abc1']);
+  assert.deepEqual(abc.map((x) => x.letters.join('')), ['abcdefghijklm', 'nopqrstuvwxyz']);
+  assert.ok(abc.every((x) => x.blanks.length === 9 && new Set(x.blanks.map((b) => b.i)).size === 9), 'a column keeps one of its letters');
+  // 7. four starts, four words, from four groups
+  const mb = of('sentence')[0];
+  assert.equal(mb.type, 'matchboard'); assert.equal(mb.ids.length, 4);
+  assert.equal(new Set(mb.ids.map((id) => CC.matchGroups.findIndex((g) => g.includes(id)))).size, 4);
+  // 8. a story, one per mock day
+  assert.deepEqual([7, 8, 9].map((d) => mockOf(seenAll(), true, d).find((x) => x.type === 'story').story), [0, 1, 2]);
   assert.deepEqual(of('extra').map((x) => x.type).sort(), ['colour', 'colour', 'where', 'where']);
-  assert.ok(of('bank').every((x) => !x.wordId.startsWith('p-')));
-  // each day its own text
-  assert.deepEqual([7, 8, 9].map((d) => mockOf(seenAll(), true, d).find((x) => x.type === 'report').passage), [2, 0, 1]);
 });
 
-test('the mock without a voice: the whistle part becomes missing letters', () => {
+test('the mock without a voice: the heard blends become missing letters', () => {
   const q = mockOf(seenAll(), false);
   assert.ok(!q.some((x) => x.type === 'whistle'));
-  assert.equal(q.filter((x) => x.part === 'whistle' && x.type === 'missing').length, 6);
+  assert.equal(q.filter((x) => x.part === 'whistle' && x.type === 'missing').length, 5);
+});
+
+test('the dinner board: every bank word is its own dish\'s ingredient and no other dish\'s on the board', () => {
+  const cards = seenAll();
+  for (let n = 0; n < 300; n++) {
+    const b = E.dinnerBoard(CC.dinner.dishes, cards, Math.random);
+    assert.ok(b);
+    const ds = b.rows.map((r) => CC.dinner.dishes.find((d) => d.dish === r.dish));
+    b.rows.forEach((r, i) => {
+      assert.ok(ds[i].need.includes(r.a));
+      assert.ok(ds.every((d, j) => j === i || !d.need.includes(r.a)), `${r.a} fits ${r.dish} only`);
+    });
+    assert.equal(new Set(b.rows.map((r) => r.a)).size, 3);
+  }
+});
+
+test('the stories: every answer is written in its marked sentence; glossary stars match the text', () => {
+  for (const st of CC.stories) {
+    assert.ok(st.text.length >= 10 && st.text.length <= 13, st.title);
+    assert.equal(st.yesno.length, 3); assert.equal(st.fill.length, 3);
+    assert.ok(st.yesno.some((x) => x.a) && st.yesno.some((x) => !x.a));
+    assert.ok(st.fill.some((f) => f.a.length === 2), 'one line has two gaps');
+    for (const f of st.fill) {
+      assert.equal((f.q.match(/___/g) || []).length, f.a.length, f.q);
+      for (const a of f.a) assert.ok([].concat(f.at).some((k) => st.text[k].includes(a)), `${a} in ${st.title}`);
+    }
+    st.glossary.forEach(([e], k) => assert.ok(st.text.some((t) => t.includes(`${e}${'*'.repeat(k + 1)}`)), `${e} is starred`));
+  }
 });
 
 test('from the first mock day the match is the review and the kicks; the name joins the match before that', () => {
@@ -334,7 +378,7 @@ test('the training ground: the craftiest words first, missed sets come back, not
   const cards = seenAll();
   Object.assign(cards.spinach, { misses: 4, tricky: true });
   cards.cheese.misses = 2; cards.chair.misses = 1;
-  const history = [{ letter: { right: 4, total: 6, missed: ['b', 'q'] }, where: { right: 3, total: 4, missed: ['near'] }, sentence: { right: 4, total: 5, missed: ['kitchen'] } }];
+  const history = [{ abc: { right: 16, total: 18, missed: ['b', 'q'] }, where: { right: 3, total: 4, missed: ['near'] }, sentence: { right: 4, total: 5, missed: ['kitchen'] } }];
   const pool = E.trickyPool({ words: CC.words, cards, history });
   assert.equal(pool.words[0], 'spinach');
   assert.deepEqual(pool.words.slice(0, 4).sort(), ['chair', 'cheese', 'kitchen', 'spinach']);

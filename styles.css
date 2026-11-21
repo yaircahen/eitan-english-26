@@ -384,3 +384,56 @@ h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 900; line-height: 1.1; 
 .coach table.sets th, .coach table.sets td { text-align: start; padding: 4px 8px; border-bottom: 1px solid rgba(255, 255, 255, .12); }
 .coach table.sets tr.has-miss td:last-child { color: var(--gold); }
 .coach h3 { font-size: 1rem; margin: 12px 0 2px; }
+
+/* ---------- the test paper's boards (mock): several gaps on one sheet, written one after another ---------- */
+.stage.board { gap: 10px; padding-top: 14px; }
+.wbank { background: #f4f6fb; color: var(--night); width: 100%; max-width: 860px; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; justify-content: center; font: 800 1.45rem var(--font-en); border-inline-start: 10px solid var(--garnet); }
+.wbank b { font-weight: 900; }
+.wbank span.used, .wbank .food.used { color: #9aa3b8; text-decoration: line-through; }
+.sortbank .food { font: 800 1.5rem var(--font-en); color: var(--night); padding: 6px 12px; border-bottom: 4px solid transparent; }
+.sortbank .food.sel { border-bottom-color: var(--garnet); background: var(--gold); }
+.wgap { display: inline-block; min-width: 4.2em; min-height: 1.35em; padding: 0 .25em; border-bottom: 5px solid var(--dim); font: 900 1em var(--font-en); text-align: center; vertical-align: bottom; }
+.wgap.active { border-bottom-color: var(--gold); color: var(--gold); }
+.wgap .caret { display: inline-block; width: 3px; height: .95em; background: var(--gold); margin-inline-start: 3px; animation: blink 1s steps(2) infinite; }
+.wgap.ok { border-bottom-color: #2fbf71; color: #2fbf71; }
+.wgap.bad { border-bottom-color: #ff7da0; color: var(--gold); }
+.wgap.bad s { color: #ff7da0; margin-inline-end: .3em; }
+.pics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 860px; }
+.pic { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--night-2); padding: 10px 4px 12px; font-size: 1.4rem; }
+.pic .wgap { min-width: 0; width: 90%; }
+.lines { font: 800 clamp(1.3rem, 3.4vw, 1.9rem)/1.9 var(--font-en); text-align: left; margin: 0; padding-left: 1.6em; list-style: lower-alpha; }
+.lines .wgap { min-width: 5em; }
+table.abc { border-collapse: collapse; background: #f4f6fb; color: var(--night); font: 900 1.6rem var(--font-en); }
+table.abc td { border: 2px solid var(--night); width: 2.2em; height: 1.9em; text-align: center; padding: 0; }
+table.abc .wgap { min-width: 0; width: 1.4em; border-bottom-width: 4px; color: var(--night); }
+table.abc .wgap.active { background: var(--gold); color: var(--night); }
+table.abc .wgap.ok { color: #128a4a; }
+table.abc .wgap.bad { color: var(--garnet); font-size: .8em; }
+.match2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px 28px; width: 100%; max-width: 900px; text-align: left; }
+.match2 ol, .match2 ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mstart, .mword { width: 100%; text-align: left; background: var(--night-2); padding: 12px 14px; font: 800 1.35rem var(--font-en); border-left: 8px solid var(--blue); }
+.mstart i { font-style: normal; color: var(--gold); margin-right: .3em; }
+.mword { border-left-color: var(--garnet); }
+.mword .num { display: inline-block; min-width: 1.6em; border-bottom: 4px solid var(--dim); text-align: center; color: var(--gold); margin-right: .4em; }
+.mstart.sel, .mword.sel { background: var(--gold); color: var(--night); }
+.mstart.done, .mword.done { background: #1d6b45; border-left-color: #2fbf71; cursor: default; }
+.shake { animation: shake .4s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.storygrid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 14px; width: 100%; align-items: start; }
+.storygrid .paper { max-width: none; max-height: 560px; overflow-y: auto; }
+.storygrid .paper p { font-size: 1.2rem; line-height: 1.65; }
+.paper .gloss { margin-top: 8px; font-size: 1rem; color: #4a5470; }
+.qbox { display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
+.qbox .kb { width: 100%; }
+.qbox .opts { width: 100%; }
+.qbox .kb { margin-top: 4px; }
+.qbox .key { min-width: 0; }
+.storyst .note { margin: 0; min-height: 2.2em; }
+@media (max-width: 900px) {
+  .storygrid { grid-template-columns: 1fr; }
+  .storygrid .paper { max-height: 36vh; }
+  .pics { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .pic .emoji.sm { font-size: 2.4rem; }
+  table.abc { font-size: 1.25rem; }
+  .match2 { grid-template-columns: 1fr; }
+}

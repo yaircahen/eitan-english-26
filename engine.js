@@ -242,25 +242,77 @@
   /* ---------- the mock match: the test's eight exercises in the test's order, plus the name and extra time ----------
      Every item is a set: a mock never moves a box. `part` names the exercise, for the coach's report. */
   const MOCK_PARTS = ['name', 'whistle', 'bank', 'sort', 'missing', 'dinner', 'letter', 'sentence', 'report', 'extra'];
-  function buildMock({ words, cards, dayNum, speech, kit, dinner, letters, report, rng = Math.random }) {
+  const typable = (w) => /^[a-z]+$/.test(w.en);
+
+  /* Exercise 5: three dishes and a bank of three words. A word is never an ingredient of another dish on the board,
+     and words that clearly do not go in the other dishes come first, so the bank works by elimination, as on paper. */
+  function dinnerBoard(dishes, cards, rng) {
+    const met = (id) => cards[id] && cards[id].seen;
+    for (let tries = 0; tries < 200; tries++) {
+      const ds = shuffle(dishes, rng).slice(0, 3);
+      const rows = [];
+      for (const d of ds) {
+        const others = ds.filter((x) => x !== d);
+        const ok = shuffle(d.need, rng)
+          .filter((id) => met(id) && others.every((o) => !o.need.includes(id)) && !rows.some((r) => r.a === id))
+          .sort((a, b) => others.filter((o) => o.not.includes(b)).length - others.filter((o) => o.not.includes(a)).length);
+        if (!ok.length) break;
+        rows.push({ dish: d.dish, a: ok[0] });
+      }
+      if (rows.length === 3) return { type: 'dinnerboard', rows, bank: shuffle(rows.map((r) => r.a), rng) };
+    }
+    return null;
+  }
+
+  /* Exercise 6: half of the alphabet in a table, capitals above and small letters below, with gaps in both rows.
+     A column keeps at least one of its two letters, as on the practice page. */
+  function abcBoard(half, rng, blanks = 9) {
+    const letters = [...'abcdefghijklmnopqrstuvwxyz'].slice(half * 13, half * 13 + 13);
+    const cols = shuffle(letters.map((_, i) => i), rng).slice(0, blanks).sort((a, b) => a - b);
+    return { type: 'abc', half, letters, blanks: cols.map((i) => ({ i, row: rng() < 0.5 ? 'cap' : 'small' })) };
+  }
+
+  /* Exercise 7: four sentence starts and four words, one word from each of four groups. */
+  function matchBoard(words, cards, groups, rng) {
+    const ok = (id) => { const w = words.find((x) => x.id === id); return w && w.sent && cards[id] && cards[id].seen; };
+    const gs = shuffle(groups, rng).slice(0, 4);
+    const ids = gs.map((g) => shuffle(g.filter(ok), rng)[0]).filter(Boolean);
+    return ids.length === 4 ? { type: 'matchboard', ids: shuffle(ids, rng), words: shuffle(ids, rng) } : null;
+  }
+
+  function buildMock({ words, cards, dayNum, speech, kit, dinner, letters, report, shape = {}, rng = Math.random }) {
     const met = words.filter((w) => cards[w.id] && cards[w.id].seen && !w.phrase);
+    const isMet = (id) => cards[id] && cards[id].seen;
     const take = (list, n) => shuffle(list, rng).slice(0, n);
     const parts = {};
     parts.name = [{ type: 'name' }];
+    // 1. five words by ear, the blend written
     const heard = met.filter((w) => w.blend && !w.silent);
     const ch = take(heard.filter((w) => w.blend === 'ch'), 3), sh = take(heard.filter((w) => w.blend === 'sh'), 3);
-    const byEar = shuffle(ch.concat(sh), rng);
-    parts.whistle = byEar.map((w) => ({ type: speech ? 'whistle' : 'missing', wordId: w.id }));
-    parts.bank = take(met, 6).map((w) => ({ type: 'bank', wordId: w.id }));
+    const byEar = shuffle(ch.concat(sh), rng).slice(0, 5);
+    parts.whistle = byEar.map((w) => (speech ? { type: 'whistle', wordId: w.id, write: true } : { type: 'missing', wordId: w.id }));
+    // 2. five pictures, a bank of five, the word written under each
+    const pics = (shape.pictures || met.map((w) => w.id)).filter((id) => isMet(id) && typable(words.find((w) => w.id === id)));
+    parts.bank = pics.length >= 5 ? [{ type: 'bankboard', ids: take(pics, 5) }] : take(met, 5).map((w) => ({ type: 'bank', wordId: w.id }));
+    // 3. six foods to three colour columns
     const srt = sortItem(kit, cards, rng);
     parts.sort = srt ? [srt] : [];
-    const blended = met.filter((w) => w.blend);
-    const fresh = blended.filter((w) => !byEar.includes(w));
-    parts.missing = take(fresh.length >= 6 ? fresh : blended, 6).map((w) => ({ type: 'missing', wordId: w.id }));
-    parts.dinner = take(dinner.dishes, 3).map((d) => ({ type: 'dinner', dish: d.dish, a: shuffle(d.need, rng)[0], wrong: take(d.not, 3) }));
-    parts.letter = take([...letters.sets.join('')], 8).map((l, i) => ({ type: 'letter', letter: l, rev: i % 2 === 1 }));
-    parts.sentence = take(met.filter((w) => w.sent), 5).map((w) => ({ type: 'sentence', wordId: w.id }));
-    parts.report = [{ type: 'report', passage: Math.max(0, dayNum - report.from) % report.passages.length }];
+    // 4. a picture and the word with a gap: the blend written. Picture only, as on paper
+    const clear = met.filter((w) => w.blend && (!shape.picBlend || shape.picBlend.includes(w.id)) && !byEar.includes(w));
+    parts.missing = take(clear, 4).map((w) => ({ type: 'missing', wordId: w.id, picOnly: true }));
+    // 5. three dishes, a bank of three
+    const db = dinnerBoard(dinner.dishes, cards, rng);
+    parts.dinner = db ? [db] : [];
+    // 6. the alphabet table, both halves
+    parts.letter = [abcBoard(0, rng), abcBoard(1, rng)];
+    // 7. four sentence starts to four words
+    const mb = shape.matchGroups ? matchBoard(words, cards, shape.matchGroups, rng) : null;
+    parts.sentence = mb ? [mb] : take(met.filter((w) => w.sent), 4).map((w) => ({ type: 'sentence', wordId: w.id }));
+    // 8. a story with yes/no and words written from it (the older short texts when there are no stories)
+    const k = Math.max(0, dayNum - (shape.storyFrom || 1));
+    parts.report = shape.stories && shape.stories.length
+      ? [{ type: 'story', story: k % shape.stories.length }]
+      : [{ type: 'report', passage: Math.max(0, dayNum - report.from) % report.passages.length }];
     const cols = take(kit.colours, 2), preps = take(kit.preps, 2);
     parts.extra = [{ type: 'colour', colour: cols[0].en, rev: false }, { type: 'where', prep: preps[0].en },
       { type: 'colour', colour: cols[1].en, rev: true }, { type: 'where', prep: preps[1].en }];
@@ -292,7 +344,8 @@
   /* ---------- the training ground: the craftiest opponents get another round ----------
      Words are ranked by their misses (cards) and by the misses on test-shaped sets (history: summaries of past
      matches and mocks). Nothing here moves a box: the app plays every item as a set. */
-  const WORD_DRILLS = ['recognise', 'bank', 'whistle', 'missing', 'sentence'];
+  const WORD_DRILLS = ['recognise', 'bank', 'whistle', 'missing', 'sentence', 'bankboard', 'matchboard'];
+  const SET_OF = { abc: 'letter', dinnerboard: 'dinner' }; // the test-paper boards count with their simple drill
   function trickyPool({ words, cards, history = [] }) {
     const score = {};
     const add = (k, n) => { score[k] = (score[k] || 0) + n; };
@@ -305,7 +358,7 @@
       for (const [t, o] of Object.entries(h || {})) {
         for (const k of o.missed || []) {
           if (WORD_DRILLS.includes(t)) add(k, 2);
-          else if (sets[t]) sets[t][k] = (sets[t][k] || 0) + 1;
+          else if (sets[SET_OF[t] || t]) { const g = sets[SET_OF[t] || t]; g[k] = (g[k] || 0) + 1; }
         }
       }
     }
@@ -358,7 +411,7 @@
     return q.concat(shuffle(later.concat(sets.slice(0, TRAIN_SETS)), rng));
   }
 
-  const Engine = { buildMock, MOCK_PARTS, summarise, trickyPool, buildTraining, sortItem, newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, squadFace, shuffle };
+  const Engine = { buildMock, dinnerBoard, abcBoard, matchBoard, MOCK_PARTS, summarise, trickyPool, buildTraining, sortItem, newCard, answer, dueWords, buildSession, followUps, nextDrill, canWhistle, secondFace, squadFace, shuffle };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;
 })(typeof window !== 'undefined' ? window : globalThis);

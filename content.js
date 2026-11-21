@@ -138,7 +138,8 @@ window.CONTENT = {
       { en: 'purple', he: 'סגול', hex: '#8a3fd1' }, { en: 'grey', he: 'אפור', hex: '#8d949e' },
     ],
     sort: {
-      red: ['tomatoes', 'apples'], yellow: ['bananas', 'lemon', 'cheese', 'chips'], brown: ['chocolate', 'bread', 'cookie'],
+      // jam and coffee: the teacher's practice page sorts them as red and brown (21 Nov)
+      red: ['tomatoes', 'apples', 'jam'], yellow: ['bananas', 'lemon', 'cheese', 'chips'], brown: ['chocolate', 'bread', 'cookie', 'coffee'],
       orange: ['oranges', 'carrots'], green: ['spinach', 'salad'], white: ['milk', 'eggs'],
     },
     preps: [{ en: 'in', he: 'בתוך' }, { en: 'on', he: 'על' }, { en: 'under', he: 'מתחת' }, { en: 'near', he: 'ליד' }],
@@ -149,18 +150,97 @@ window.CONTENT = {
   dinner: {
     from: 6,
     dishes: [
-      { dish: 'a pizza', need: ['cheese', 'tomatoes'], not: ['jam', 'tea', 'shoes', 'cookie', 'juice', 'icecream'] },
-      { dish: 'a salad', need: ['tomatoes', 'carrots', 'peppers', 'onions'], not: ['chocolate', 'cake', 'coffee', 'shirt', 'jam', 'cookie'] },
-      { dish: 'a sandwich', need: ['bread', 'cheese'], not: ['juice', 'tea', 'chair', 'water', 'coffee', 'sheep'] },
-      { dish: 'a milkshake', need: ['milk', 'chocolate', 'bananas'], not: ['onions', 'meat', 'fish', 'peppers', 'shoes', 'bread'] },
-      { dish: 'a cake', need: ['eggs', 'milk', 'chocolate'], not: ['onions', 'meat', 'fish', 'peppers', 'spinach', 'brush'] },
-      { dish: 'a hamburger', need: ['meat', 'bread'], not: ['jam', 'juice', 'cake', 'cookie', 'tea', 'shirt'] },
+      { dish: 'a pizza', need: ['cheese', 'tomatoes'], not: ['jam', 'tea', 'shoes', 'cookie', 'juice', 'icecream', 'bananas', 'apples', 'oranges', 'chocolate', 'coffee', 'milk', 'cake', 'lemon'] },
+      { dish: 'a salad', need: ['tomatoes', 'carrots', 'peppers', 'onions'], not: ['chocolate', 'cake', 'coffee', 'shirt', 'jam', 'cookie', 'icecream', 'milk', 'juice', 'tea', 'bananas'] },
+      { dish: 'a sandwich', need: ['bread', 'cheese'], not: ['juice', 'tea', 'chair', 'water', 'coffee', 'sheep', 'icecream', 'cake', 'cookie', 'bananas', 'oranges', 'apples', 'milk', 'chocolate'] },
+      { dish: 'a milkshake', need: ['milk', 'chocolate', 'bananas'], not: ['onions', 'meat', 'fish', 'peppers', 'shoes', 'bread', 'eggs', 'cheese', 'tomatoes', 'carrots', 'spinach', 'chips'] },
+      { dish: 'a cake', need: ['eggs', 'milk', 'chocolate'], not: ['onions', 'meat', 'fish', 'peppers', 'spinach', 'brush', 'tomatoes', 'chips'] },
+      { dish: 'a hamburger', need: ['meat', 'bread'], not: ['jam', 'juice', 'cake', 'cookie', 'tea', 'shirt', 'bananas', 'apples', 'oranges', 'milk', 'chocolate', 'icecream', 'coffee'] },
+      { dish: 'a fruit salad', need: ['apples', 'bananas', 'oranges'], not: ['onions', 'meat', 'fish', 'coffee', 'chips', 'cheese', 'eggs', 'bread', 'peppers', 'spinach', 'tomatoes', 'carrots'] },
+      { dish: 'an omelette', need: ['eggs'], not: ['jam', 'cake', 'juice', 'cookie', 'bananas', 'tea', 'apples', 'oranges', 'chocolate', 'coffee', 'icecream'] },
+      { dish: 'a vegetable soup', need: ['carrots', 'onions', 'peppers'], not: ['chocolate', 'cake', 'jam', 'cookie', 'juice', 'bananas', 'apples', 'milk', 'icecream', 'coffee', 'oranges', 'eggs', 'bread'] },
     ],
   },
 
   /* Kit numbers (exercise 6 of the test): the capital and the small letter of every pair, Aa to Zz.
      One set a day from day `from`; after the last set, eight letters a day from the whole alphabet. */
   letters: { from: 5, sets: ['abcdef', 'ghijkl', 'mnopqr', 'stuvwxyz'], mixed: 8 },
+
+  /* The test paper's own shapes (the teacher's practice page, 21 Nov; its text is not copied, only its shape).
+     pictures: foods whose emoji is clear enough to stand alone, as the pictures of exercise 2.
+     picBlend: ch / sh words whose emoji is clear without the Hebrew, as the pictures of exercise 4.
+     matchGroups: exercise 7 matches four sentence starts to four words. One word from each of four groups, so no
+     word fits another word's sentence. */
+  pictures: ['pizza', 'bread', 'eggs', 'milk', 'apples', 'bananas', 'cake', 'lemon', 'tomatoes', 'cookie', 'oranges', 'juice',
+    'salad', 'hamburger', 'carrots', 'onions', 'peppers', 'chips', 'chicken', 'chocolate', 'cheese', 'sandwich', 'fish', 'coffee'],
+  picBlend: ['chicken', 'chips', 'chocolate', 'sandwich', 'cheese', 'chair', 'teacher', 'children', 'fish', 'sheep', 'shirt',
+    'shorts', 'shoes', 'brush', 'milkshake', 'share', 'wash', 'shop'],
+  matchGroups: [
+    ['chair', 'kitchen', 'school', 'shop', 'table', 'restaurant', 'teacher', 'children', 'sheep', 'shirt', 'shoes', 'shorts', 'brush'],
+    ['pizza', 'bread', 'eggs', 'apples', 'bananas', 'cake', 'lemon', 'tomatoes', 'cookie', 'salad', 'meat', 'hamburger', 'jam', 'carrots', 'chips', 'cheese', 'onions'],
+    ['water', 'milk', 'juice', 'tea', 'coffee', 'milkshake'],
+    ['eat', 'drink', 'wash', 'share', 'like', 'want', 'need', 'make', 'hungry', 'short'],
+    ['food', 'drinks', 'fruit', 'vegetables', 'shoppinglist'],
+  ],
+
+  /* Exercise 8 in the test's shape: a story of about twelve short sentences with names and feelings, a few new words
+     glossed in Hebrew, three yes/no lines (one needs a little thinking, not only finding), and three lines to complete
+     with one word copied from the story, one of them with two gaps. Our own stories, one per mock day. */
+  stories: [
+    {
+      title: "Dad's Birthday",
+      text: ['Today is Dad\'s birthday**.', 'Noa and her brother Ben want to make a cake.', 'They write a shopping list: eggs, milk and chocolate.',
+        'They go to the shop.', 'Oh no! There is no chocolate in the shop.', 'Noa is sad.', 'Ben says: We can make a lemon cake!',
+        'They make the cake in the kitchen.', 'Dad comes home.', 'He is very surprised*.', 'He eats the cake and says: I like lemon cake!', 'Noa is happy.'],
+      glossary: [['surprised', 'מופתע'], ['birthday', 'יום הולדת']],
+      yesno: [
+        { q: 'Noa and Ben go to the shop.', a: true, at: 3 },
+        { q: 'They make a chocolate cake.', a: false, at: 6 },
+        { q: 'Dad likes the cake.', a: true, at: 10 },
+      ],
+      fill: [
+        { q: "Noa's brother is ___.", a: ['Ben'], at: 1 },
+        { q: 'At the shop Noa is ___, and at the end she is ___.', a: ['sad', 'happy'], at: [5, 11] },
+        { q: 'They make the cake in the ___.', a: ['kitchen'], at: 7 },
+      ],
+    },
+    {
+      title: 'After the Match',
+      text: ['Omer and his friends play football.', 'After the match the children are very hungry.', 'Omer\'s mom takes them to a restaurant.',
+        'Omer wants a hamburger and chips.', 'His friend Dana doesn\'t like meat.', 'She eats pizza with tomatoes.',
+        'They drink cold water and orange juice.', 'Then the waiter* comes with ice cream.', 'Omer\'s ice cream falls on the floor**!',
+        'Omer is sad.', 'Dana shares her ice cream with Omer.', 'Omer says: Thank you, Dana! You are a good friend.'],
+      glossary: [['waiter', 'מלצר'], ['floor', 'רצפה']],
+      yesno: [
+        { q: 'The children eat at a restaurant.', a: true, at: 2 },
+        { q: 'Dana eats a hamburger.', a: false, at: 5 },
+        { q: 'Dana is a good friend.', a: true, at: 11 },
+      ],
+      fill: [
+        { q: "Omer's friend is ___.", a: ['Dana'], at: 4 },
+        { q: "Dana doesn't like ___. She eats ___.", a: ['meat', 'pizza'], at: [4, 5] },
+        { q: 'The children drink water and orange ___.', a: ['juice'], at: 6 },
+      ],
+    },
+    {
+      title: "At Grandma's House",
+      text: ['On Friday Lior goes to Grandma\'s house.', 'Grandma has a small garden* with carrots, tomatoes and peppers.', 'Lior is hungry.',
+        'Grandma says: Let\'s make a salad!', 'Lior washes the vegetables with water.', 'Grandma cuts** the onions, and she cries.',
+        'Lior laughs.', 'They put the salad on the table.', 'Grandpa makes tea with lemon.', 'They eat and drink together.',
+        'Lior says: Yum! The salad is very good.', 'Now Lior likes vegetables.'],
+      glossary: [['garden', 'גינה'], ['cuts', 'חותכת']],
+      yesno: [
+        { q: 'Lior is at Grandma\'s house.', a: true, at: 0 },
+        { q: 'Lior cuts the onions.', a: false, at: 5 },
+        { q: 'Lior doesn\'t like the salad.', a: false, at: 10 },
+      ],
+      fill: [
+        { q: 'Lior washes the vegetables with ___.', a: ['water'], at: 4 },
+        { q: 'Grandpa makes ___ with ___.', a: ['tea', 'lemon'], at: 8 },
+        { q: 'The salad is on the ___.', a: ['table'], at: 7 },
+      ],
+    },
+  ],
 
   /* The mock match (prd.md §10): the test's eight exercises in the test's order, one sitting, from day `from` to day
      `until`. A friendly on the first days, the Clásico on day `clasico`. It opens after the day's match, never moves a
@@ -171,14 +251,14 @@ window.CONTENT = {
     friendlies: ['Maccabi Milkshake', 'Inter Sandwich'],
     parts: {
       name: { title: 'השם בראש הדף', line: 'כמו בכל דף מבחן: קודם כל השם באנגלית.' },
-      whistle: { no: 1, title: 'השריקה', line: 'שומעים מילה, ובוחרים איזה צמד מתחבא בה: ch או sh.' },
-      bank: { no: 2, title: 'מחסן המילים', line: 'תמונה ומילה בעברית. שולפים מהמחסן את המילה באנגלית.' },
-      sort: { no: 3, title: 'מדפי הצבעים', line: 'כל מאכל למדף של הצבע שלו. שניים על כל מדף.' },
-      missing: { no: 4, title: 'האותיות שברחו', line: 'שתי אותיות ברחו מהמילה. מחזירים אותן.' },
-      dinner: { no: 5, title: 'ארוחת הקבוצה', line: 'הטבח רוצה להכין משהו. בוחרים מה הוא צריך.' },
-      letter: { no: 6, title: 'מספרי החולצות', line: 'אות גדולה ואות קטנה מחפשות זו את זו.' },
-      sentence: { no: 7, title: 'המשפט החסר', line: 'מילה ברחה מהמשפט. מחזירים אותה.' },
-      report: { no: 8, title: 'דו״ח המשחק', line: 'קוראים את הכתבה ועונים: כן או לא, ומילה אחת.' },
+      whistle: { no: 1, title: 'השריקה', line: 'שומעים מילה, וכותבים את הצמד שמתחבא בה: ch או sh.' },
+      bank: { no: 2, title: 'מחסן המילים', line: 'חמש תמונות וחמש מילים במחסן. כותבים מתחת לכל תמונה את המילה שלה.' },
+      sort: { no: 3, title: 'מדפי הצבעים', line: 'שש מילים במחסן. כל מאכל לעמודה של הצבע שלו, שניים בכל עמודה.' },
+      missing: { no: 4, title: 'האותיות שברחו', line: 'רק תמונה ומילה עם חור. כותבים את הצמד: ch או sh.' },
+      dinner: { no: 5, title: 'ארוחת הקבוצה', line: 'שלושה משפטים ושלוש מילים במחסן. כותבים בכל משפט מה צריך.' },
+      letter: { no: 6, title: 'טבלת האותיות', line: 'האותיות לפי הסדר: גדולות למעלה, קטנות למטה. משלימים את החסרות.' },
+      sentence: { no: 7, title: 'חצאי משפטים', line: 'ארבע התחלות וארבע מילים. מחברים כל התחלה למילה שלה.' },
+      report: { no: 8, title: 'סיפור קצר', line: 'קוראים סיפור. עונים Yes או No, וכותבים מילה אחת מהסיפור.' },
       extra: { title: 'תוספת זמן', line: 'צבעים, ואיפה הכדור מתחבא.' },
     },
   },

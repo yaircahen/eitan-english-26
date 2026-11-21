@@ -418,6 +418,7 @@
       state.mock = Object.assign(newRun('mock', t, E.buildMock({
         words: C.words, cards: state.cards, dayNum: dayNum(t), speech: Voice.ok,
         kit: C.kit, dinner: C.dinner, letters: C.letters, report: C.report,
+        shape: { pictures: C.pictures, picBlend: C.picBlend, matchGroups: C.matchGroups, stories: C.stories, storyFrom: C.mock.from },
       })), { kind: mockKind(t), rival: rivalOf(t) });
       save();
     }
@@ -557,7 +558,7 @@
     if (s.pos >= s.queue.length) return s.mode === 'mock' ? mockEnd() : s.mode === 'train' ? trainEnd() : fullTime();
     const item = s.queue[s.pos];
     ({ intro, recognise, whistle, missing, bank, sentence, spell, halftime, shootout, kitintro, colour, sort, whereintro, where, report, dinner, letter,
-      name: nameDrill, mockpart, trainstart })[item.type](item);
+      name: nameDrill, mockpart, trainstart, bankboard, dinnerboard, abc, matchboard, story })[item.type](item);
   }
   function next() { clock(); run.pos++; save(); play(); }
 
@@ -735,6 +736,7 @@
   }
 
   function whistle(item) {
+    if (item.write) return whistleWrite(item);
     const text = item.wordId ? WORD[item.wordId].en : item.foil;
     const blend = item.wordId ? WORD[item.wordId].blend : 'sh';
     screen(`<section class="play">${hud()}
@@ -757,13 +759,13 @@
     });
   }
 
-  function typed(item, { kicker, goLabel, prefix, suffix, answer, full }) {
+  function typed(item, { kicker, goLabel, prefix, suffix, answer, full, cue, miss }) {
     const w = WORD[item.wordId];
     let buf = '';
     screen(`<section class="play">${hud()}
       <div class="stage">
         <p class="kicker">${kicker}</p>
-        <div class="cue"><span class="emoji sm">${w.emoji}</span><span class="he">${esc(w.he)}</span></div>
+        ${cue || `<div class="cue"><span class="emoji sm">${w.emoji}</span><span class="he">${esc(w.he)}</span></div>`}
         <div class="typed" id="typed" dir="ltr"></div>
         ${keyboardHtml(goLabel)}
       </div></section>`, 'scr-play');
@@ -781,7 +783,7 @@
       else if (k === 'ENTER') {
         if (!buf) return;
         const attempt = prefix + buf + suffix;
-        return settle(item, buf === answer, markHtml(w.en, attempt));
+        return settle(item, buf === answer, miss ? miss(buf) : markHtml(w.en, attempt));
       } else if (/^[a-z]$/.test(k) && buf.length < (full ? 16 : answer.length)) buf += k;
       paint();
     });
@@ -793,7 +795,225 @@
     typed(item, {
       kicker: 'שתי אותיות ברחו מהמילה. מחזירים אותן!', goLabel: 'מחזירים',
       prefix: w.en.slice(0, i), suffix: w.en.slice(i + 2), answer: w.blend, full: false,
+      cue: item.picOnly ? `<div class="cue"><span class="emoji">${w.emoji}</span></div>` : '', // the paper has the picture only
     });
+  }
+
+  // Exercise 1 as on paper: the word is heard, and the blend is written
+  function whistleWrite(item) {
+    const w = WORD[item.wordId];
+    typed(item, {
+      kicker: 'שריקה! כותבים את הצמד שמתחבא במילה: ch או sh', goLabel: 'כותבים', prefix: '', suffix: '', answer: w.blend, full: false,
+      cue: '<button class="say whistle-btn" id="say" aria-label="להשמיע שוב">🔊<span>להשמיע שוב</span></button>',
+      miss: (buf) => `<span class="lbl">במילה ${en(w.en)} מתחבא ${en(w.blend)}, לא ${en(buf)}</span>`,
+    });
+    Voice.say(w.en);
+    on('#say', () => Voice.say(w.en));
+  }
+
+  /* ---------- the test paper's boards: several gaps on one page, written one after another ----------
+     A wrong word is crossed out and the right one written next to it, in place. One try per gap, as on paper. */
+  function writeBoard(gaps, done) {
+    let g = 0, buf = '';
+    const el = (i) => document.getElementById(gaps[i].el);
+    const paint = () => {
+      gaps.forEach((x, i) => el(i).classList.toggle('active', i === g));
+      if (g < gaps.length) el(g).innerHTML = `${esc(buf)}<i class="caret"></i>`;
+      const up = g < gaps.length && gaps[g].upper;
+      $app.querySelectorAll('.kb .key[data-k]').forEach((k) => { if (k.dataset.k.length === 1) k.textContent = up ? k.dataset.k.toUpperCase() : k.dataset.k; });
+    };
+    paint();
+    bindKeys((k) => {
+      if (g >= gaps.length) return;
+      const x = gaps[g];
+      if (k === 'DEL') buf = buf.slice(0, -1);
+      else if (k === 'ENTER') {
+        if (!buf) return;
+        const ok = buf.toLowerCase() === x.a.toLowerCase();
+        tally(ok, x.key); paintScore();
+        (ok ? Sfx.goal : Sfx.slip)(run.combo);
+        const box = el(g);
+        box.classList.remove('active');
+        box.classList.add(ok ? 'ok' : 'bad');
+        box.innerHTML = ok ? esc(x.a) : `<s>${esc(buf)}</s> ${esc(x.a)}`;
+        if (x.say) Voice.say(x.say);
+        if (x.after) x.after(ok);
+        buf = ''; g++;
+        if (g >= gaps.length) { keyHandler = null; return done(); }
+      } else if (/^[a-z]$/.test(k) && buf.length < 16) buf += x.upper ? k.toUpperCase() : k;
+      paint();
+    });
+  }
+  // the button under a finished board
+  function boardDone(label = 'הדף מלא. ממשיכים') {
+    const kb = $app.querySelector('.kb');
+    if (kb) kb.outerHTML = `<button class="btn btn-go" id="ok">${label}</button>`;
+    else $app.querySelector('.stage').insertAdjacentHTML('beforeend', `<button class="btn btn-go" id="ok">${label}</button>`);
+    on('#ok', () => { Sfx.tap(); next(); });
+  }
+  const bankHtml = (ids) => `<div class="wbank" dir="ltr"><b>Word Bank:</b> ${ids.map((id) => `<span data-b="${id}">${esc(WORD[id].en)}</span>`).join('')}</div>`;
+  const useBank = (id) => { const b = $app.querySelector(`.wbank [data-b="${id}"]`); if (b) b.classList.add('used'); };
+
+  // Exercise 2: five pictures, a bank of five words, the word written under each picture
+  function bankboard(item) {
+    screen(`<section class="play">${hud()}
+      <div class="stage board">
+        <p class="kicker">מחסן המילים: כותבים מתחת לכל תמונה את המילה שלה</p>
+        ${bankHtml(E.shuffle(item.ids, Math.random))}
+        <div class="pics" dir="ltr">${item.ids.map((id, i) => `<div class="pic"><span class="emoji sm">${WORD[id].emoji}</span><b class="wgap" id="g${i}"></b></div>`).join('')}</div>
+        ${keyboardHtml('כותבים')}
+      </div></section>`, 'scr-play');
+    bindHud();
+    writeBoard(item.ids.map((id, i) => ({ el: `g${i}`, a: WORD[id].en, key: id, say: WORD[id].en, after: () => useBank(id) })), () => boardDone());
+  }
+
+  // Exercise 5: three dishes, a bank of three words
+  function dinnerboard(item) {
+    screen(`<section class="play">${hud()}
+      <div class="stage board">
+        <p class="kicker">ארוחת הקבוצה: הטבח רוצה להכין שלוש מנות. כותבים בכל משפט מה הוא צריך</p>
+        <div class="emoji sm">🧑‍🍳</div>
+        ${bankHtml(item.bank)}
+        <ol class="lines" dir="ltr" lang="en">${item.rows.map((r, i) => `<li>I want to make ${esc(r.dish)}. I need <b class="wgap" id="g${i}"></b>.</li>`).join('')}</ol>
+        ${keyboardHtml('כותבים')}
+      </div></section>`, 'scr-play');
+    bindHud();
+    writeBoard(item.rows.map((r, i) => ({ el: `g${i}`, a: WORD[r.a].en, key: r.dish, say: `I need ${WORD[r.a].en}`, after: () => useBank(r.a) })), () => boardDone());
+  }
+
+  // Exercise 6: the alphabet table, capitals above and small letters below, the missing ones written in
+  function abc(item) {
+    const gap = (i, row) => item.blanks.find((b) => b.i === i && b.row === row);
+    const cell = (l, i, row) => (gap(i, row)
+      ? `<td><b class="wgap" id="c${row}${i}"></b></td>`
+      : `<td>${row === 'cap' ? l.toUpperCase() : l}</td>`);
+    screen(`<section class="play">${hud()}
+      <div class="stage board">
+        <p class="kicker">טבלת האותיות: משלימים את האותיות החסרות</p>
+        <table class="abc" dir="ltr">
+          <tr>${item.letters.map((l, i) => cell(l, i, 'cap')).join('')}</tr>
+          <tr>${item.letters.map((l, i) => cell(l, i, 'small')).join('')}</tr>
+        </table>
+        ${keyboardHtml('כותבים')}
+      </div></section>`, 'scr-play');
+    bindHud();
+    // column by column, as the eye reads the table
+    const order = item.blanks.slice().sort((a, b) => a.i - b.i || (a.row === 'cap' ? -1 : 1));
+    writeBoard(order.map((b) => {
+      const l = item.letters[b.i];
+      return { el: `c${b.row}${b.i}`, a: b.row === 'cap' ? l.toUpperCase() : l, upper: b.row === 'cap', key: l };
+    }), () => boardDone());
+  }
+
+  // Exercise 7: four sentence starts and four words. Tap a word, then the sentence it ends (or the other way round)
+  function matchboard(item) {
+    const start = (id) => {
+      const t = WORD[id].sent[0];
+      return /___[.!?]?$/.test(t) ? `${esc(t.replace(/\s*___[.!?]?$/, ''))}…` : esc(t).replace('___', '<b class="gap">&nbsp;</b>');
+    };
+    screen(`<section class="play">${hud()}
+      <div class="stage board">
+        <p class="kicker">חצאי משפטים: נוגעים במילה ואז במשפט שלה</p>
+        <div class="match2" dir="ltr" lang="en">
+          <ol class="starts">${item.ids.map((id, i) => `<li><button class="mstart" data-id="${id}"><i>${i + 1}.</i> ${start(id)}</button></li>`).join('')}</ol>
+          <ul class="ends">${item.words.map((id) => `<li><button class="mword" data-id="${id}"><b class="num"></b> ${esc(WORD[id].en)}</button></li>`).join('')}</ul>
+        </div>
+        <p class="note" id="mnote"></p>
+      </div></section>`, 'scr-play');
+    bindHud();
+    let word = null, startId = null, left = item.ids.length;
+    const tried = new Set();
+    const pick = (sel, id) => $app.querySelector(`${sel}[data-id="${id}"]`);
+    const tryPair = () => {
+      if (!word || !startId) return;
+      const ok = word === startId;
+      if (!tried.has(word)) { tried.add(word); tally(ok, word); paintScore(); }
+      const wEl = pick('.mword', word), sEl = pick('.mstart', startId);
+      if (ok) {
+        Sfx.goal(run.combo);
+        wEl.querySelector('.num').textContent = item.ids.indexOf(word) + 1;
+        wEl.classList.add('done'); sEl.classList.add('done'); wEl.disabled = true; sEl.disabled = true;
+        wEl.classList.remove('sel'); sEl.classList.remove('sel');
+        Voice.say(WORD[word].sent[0].replace('___', WORD[word].en));
+        document.getElementById('mnote').textContent = '';
+        if (--left === 0) boardDone();
+      } else {
+        Sfx.slip();
+        [wEl, sEl].forEach((x) => { x.classList.remove('sel'); x.classList.add('shake'); setTimeout(() => x.classList.remove('shake'), 500); });
+        document.getElementById('mnote').innerHTML = `${en(WORD[word].en)} לא נכנסת למשפט הזה. מנסים משפט אחר.`;
+      }
+      word = null; startId = null;
+    };
+    on('.mword', (e) => { word = e.currentTarget.dataset.id; $app.querySelectorAll('.mword').forEach((x) => x.classList.toggle('sel', x === e.currentTarget)); Voice.say(WORD[word].en); tryPair(); });
+    on('.mstart', (e) => { startId = e.currentTarget.dataset.id; $app.querySelectorAll('.mstart').forEach((x) => x.classList.toggle('sel', x === e.currentTarget)); tryPair(); });
+  }
+
+  // Exercise 8: a story, three yes/no lines, and three lines completed with words written from the story
+  function story(item) {
+    const st = C.stories[item.story];
+    const qs = [...st.yesno.map((x) => Object.assign({ yn: true }, x)), ...st.fill];
+    let i = 0;
+    screen(`<section class="play">${hud()}
+      <div class="stage board storyst">
+        <p class="kicker">סיפור קצר: קוראים ועונים. נגיעה במשפט משמיעה אותו</p>
+        <div class="storygrid">
+          <div class="paper" dir="ltr" lang="en"><h2>${esc(st.title)}</h2>
+            <p>${st.text.map((t, k) => `<span class="sen" data-k="${k}">${esc(t)}</span>`).join(' ')}</p>
+            <p class="gloss">${st.glossary.map(([e, h], k) => `${'*'.repeat(k + 1)}${esc(e)} = <bdi dir="rtl">${esc(h)}</bdi>`).join('&nbsp;&nbsp;&nbsp;')}</p>
+          </div>
+          <div class="qbox">
+            <p class="qno" id="qno"></p>
+            <p class="sentence sm" id="rq" dir="ltr" lang="en"></p>
+            <div id="qin"></div>
+            <p class="note" id="rnote"></p>
+          </div>
+        </div>
+      </div></section>`, 'scr-play');
+    bindHud();
+    on('.sen', (e) => Voice.say(e.currentTarget.textContent.replace(/\*/g, '')));
+    const light = (q, onOff) => [].concat(q.at).forEach((k) => $app.querySelector(`.sen[data-k="${k}"]`).classList.toggle('lit', onOff));
+    const after = (q, ok) => {
+      const go = () => { light(q, false); document.getElementById('rnote').textContent = ''; i++; show(); };
+      if (ok) return setTimeout(go, 900);
+      light(q, true);
+      document.getElementById('rnote').innerHTML = 'התשובה מתחבאת במשפט המסומן. <button class="btn sm" id="rnext">ממשיכים</button>';
+      document.getElementById('rnext').addEventListener('click', go, { once: true });
+    };
+    function show() {
+      const qin = document.getElementById('qin');
+      if (i >= qs.length) {
+        document.getElementById('qno').textContent = ''; document.getElementById('rq').textContent = ''; qin.innerHTML = '';
+        return boardDone('הסיפור נסגר. ממשיכים');
+      }
+      const q = qs[i];
+      const key = `s${item.story}:${i}`;
+      if (q.yn) {
+        document.getElementById('qno').textContent = `Write Yes / No · שורה ${i + 1} מתוך ${qs.length}`;
+        document.getElementById('rq').textContent = q.q;
+        qin.innerHTML = '<div class="opts two" dir="ltr"><button class="opt word" data-v="yes">Yes</button><button class="opt word" data-v="no">No</button></div>';
+        let done = false;
+        qin.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', (e) => {
+          if (done) return; done = true;
+          const right = q.a ? 'yes' : 'no';
+          const ok = e.currentTarget.dataset.v === right;
+          tally(ok, key); paintScore(); (ok ? Sfx.goal : Sfx.slip)(run.combo);
+          e.currentTarget.classList.add(ok ? 'is-right' : 'is-wrong');
+          qin.querySelector(`[data-v="${right}"]`).classList.add('is-right');
+          after(q, ok);
+        }));
+      } else {
+        document.getElementById('qno').textContent = `מילה אחת מהסיפור בכל רווח · שורה ${i + 1} מתוך ${qs.length}`;
+        let n = 0;
+        document.getElementById('rq').innerHTML = esc(q.q).replace(/___/g, () => `<b class="wgap" id="q${i}g${n++}"></b>`);
+        qin.innerHTML = keyboardHtml('כותבים');
+        let all = true;
+        writeBoard(q.a.map((a, j) => ({ el: `q${i}g${j}`, a, key: `${key}${q.a.length > 1 ? `.${j}` : ''}`, after: (ok) => { all = all && ok; } })), () => {
+          qin.innerHTML = '';
+          after(q, all);
+        });
+      }
+    }
+    show();
   }
 
   function spell(item) {
@@ -873,39 +1093,43 @@
     });
   }
 
-  // the colour sort: six foods, three shelves, two on each
+  // the colour sort as on paper: six words in a bank, picked in any order, two in each colour column
   function sort(item) {
-    let i = 0;
     screen(`<section class="play">${hud()}
       <div class="stage kit-sort">
-        <p class="kicker">המחסנאי התבלבל: כל מאכל למדף של הצבע שלו</p>
-        <div class="bigword" id="food" dir="ltr" lang="en"></div>
+        <p class="kicker">המחסנאי התבלבל: נוגעים במילה ואז בעמודה של הצבע שלה. שתיים בכל עמודה</p>
+        <div class="wbank sortbank" dir="ltr">${item.foods.map((f) => `<button class="food" data-id="${f.id}">${esc(WORD[f.id].en)}</button>`).join('')}</div>
         <div class="shelves" dir="ltr">${item.cols.map((c) => `<button class="shelf" data-c="${c}"><b lang="en">${c}</b><span class="on"></span></button>`).join('')}</div>
         <p class="note" id="sortnote"></p>
       </div></section>`, 'scr-play');
     bindHud();
-    const show = () => { document.getElementById('food').textContent = WORD[item.foods[i].id].en; Voice.say(WORD[item.foods[i].id].en); };
-    show();
+    let sel = null, left = item.foods.length;
+    on('.food', (e) => {
+      if (e.currentTarget.disabled) return;
+      sel = e.currentTarget.dataset.id;
+      $app.querySelectorAll('.food').forEach((x) => x.classList.toggle('sel', x === e.currentTarget));
+      Voice.say(WORD[sel].en);
+    });
     on('.shelf', (e) => {
-      if (locked) return;
-      locked = true;
-      const f = item.foods[i], w = WORD[f.id];
+      if (!sel) { document.getElementById('sortnote').textContent = 'קודם בוחרים מילה מהמחסן.'; return; }
+      const f = item.foods.find((x) => x.id === sel), w = WORD[f.id];
       const ok = e.currentTarget.dataset.c === f.col;
       tally(ok, f.id); clock(); save();
       (ok ? Sfx.goal : Sfx.slip)(run.combo);
-      if (!ok) e.currentTarget.classList.add('is-wrong');
+      const shelf = e.currentTarget;
+      if (!ok) { shelf.classList.add('is-wrong'); setTimeout(() => shelf.classList.remove('is-wrong'), 900); }
       const home = $app.querySelector(`.shelf[data-c="${f.col}"]`);
       home.querySelector('.on').insertAdjacentHTML('beforeend', `<span class="chip ${ok ? '' : 'moved'}">${w.emoji} ${en(w.en)}</span>`);
-      document.getElementById('sortnote').innerHTML = ok ? '' : `${en(w.en)} חמקה למדף של ${en(f.col)}.`;
+      document.getElementById('sortnote').innerHTML = ok ? '' : `${en(w.en)} חמקה לעמודה של ${en(f.col)}.`;
+      const b = $app.querySelector(`.food[data-id="${f.id}"]`);
+      b.disabled = true; b.classList.remove('sel'); b.classList.add('used');
+      sel = null;
       paintScore();
-      setTimeout(() => {
-        $app.querySelectorAll('.shelf.is-wrong').forEach((x) => x.classList.remove('is-wrong'));
-        if (++i < item.foods.length) { locked = false; return show(); }
-        document.getElementById('food').textContent = '';
+      if (--left === 0) {
         $app.querySelectorAll('.shelf').forEach((x) => { x.style.setProperty('--c', COLOUR[x.dataset.c].hex); x.classList.add('lit'); });
         $app.querySelector('.stage').insertAdjacentHTML('beforeend', '<button class="btn btn-go" id="ok">המדפים מסודרים. ממשיכים</button>');
         on('#ok', () => { Sfx.tap(); next(); });
-      }, ok ? 700 : 1800);
+      }
     });
   }
 
@@ -1135,6 +1359,7 @@
   const SET_HE = {
     name: 'השם (Eitan)', whistle: '1. השריקה: ch או sh בשמיעה', bank: '2. מחסן המילים', sort: '3. מיון לפי צבע', missing: '4. צמד האותיות החסר',
     dinner: '5. I want to make… I need…', letter: '6. זוגות אותיות', sentence: '7. השלמת משפט', report: '8. קטע קריאה', extra: 'צבעים ומילות מיקום',
+    bankboard: '2. מחסן המילים (תמונות)', dinnerboard: '5. I want to make… I need…', abc: '6. טבלת האותיות', matchboard: '7. חצאי משפטים', story: '8. סיפור קצר',
     colour: 'מילות צבע', where: 'in / on / under / near', spell: 'כתיבת מילה שלמה (פנדלים)', recognise: 'זיהוי מילה',
   };
   const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
@@ -1145,7 +1370,7 @@
     const keys = (order || Object.keys(SET_HE)).filter((k) => sum[k]);
     const rows = keys.map((k) => {
       const o = sum[k];
-      const miss = o.missed.filter((x) => !/^\d+:\d+$/.test(x)).map((x) => `<bdi dir="ltr">${esc(keyName(x))}</bdi>`).join(', ');
+      const miss = o.missed.filter((x) => !/^s?\d+:\d+/.test(x)).map((x) => `<bdi dir="ltr">${esc(keyName(x))}</bdi>`).join(', ');
       return `<tr class="${o.right < o.total ? 'has-miss' : ''}"><td>${SET_HE[k] || k}</td><td dir="ltr">${o.right}/${o.total}</td><td>${miss}</td></tr>`;
     }).join('');
     return `${title ? `<p>${title}</p>` : ''}<table class="sets"><tr><th>תרגיל</th><th>נכונות</th><th>לחזור על</th></tr>${rows}</table>`;
