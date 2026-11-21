@@ -274,3 +274,88 @@ test('Kit numbers and Team dinner: the day\'s letter set, then mixed; three dish
   assert.equal(new Set(ds.map((x) => x.dish)).size, 3);
   assert.ok(ds.every((x) => x.set && ['n1', 'n2'].includes(x.a) && x.wrong.length === 3 && x.wrong.every((id) => id.startsWith('x'))));
 });
+
+// ---------- the mock match and the training ground, on the real content ----------
+globalThis.window = globalThis.window || {};
+require('../content.js');
+const CC = globalThis.window.CONTENT;
+const seenAll = (lv = 5) => Object.fromEntries(CC.words.map((w) => [w.id, Object.assign(E.newCard(), { seen: true, level: lv, l3Day: D1, l4Day: D2 })]));
+const mockOf = (cards, speech = true, dayNum = 7) => E.buildMock({ words: CC.words, cards, dayNum, speech, kit: CC.kit, dinner: CC.dinner, letters: CC.letters, report: CC.report });
+
+test('the mock: the name, then the eight exercises in the test\'s order, then extra time; sets only', () => {
+  const q = mockOf(seenAll());
+  const parts = q.filter((x) => x.type === 'mockpart').map((x) => x.part);
+  assert.deepEqual(parts, E.MOCK_PARTS);
+  assert.ok(q.filter((x) => x.type !== 'mockpart').every((x) => x.set && x.phase === 'mock' && E.MOCK_PARTS.includes(x.part)));
+  const of = (p) => q.filter((x) => x.part === p && x.type !== 'mockpart');
+  assert.equal(of('name')[0].type, 'name');
+  const wh = of('whistle');
+  assert.equal(wh.length, 6);
+  assert.deepEqual(['ch', 'sh'].map((b) => wh.filter((x) => CC.words.find((w) => w.id === x.wordId).blend === b).length), [3, 3]);
+  assert.ok(!wh.some((x) => x.wordId === 'school'), 'the silent ch is never whistled');
+  assert.ok(of('missing').every((x) => !wh.some((y) => y.wordId === x.wordId)), 'other words for the missing letters');
+  assert.equal(of('sort')[0].foods.length, 6);
+  assert.equal(of('dinner').length, 3);
+  assert.equal(of('letter').length, 8);
+  assert.equal(of('sentence').length, 5);
+  assert.equal(of('report').length, 1);
+  assert.deepEqual(of('extra').map((x) => x.type).sort(), ['colour', 'colour', 'where', 'where']);
+  assert.ok(of('bank').every((x) => !x.wordId.startsWith('p-')));
+  // each day its own text
+  assert.deepEqual([7, 8, 9].map((d) => mockOf(seenAll(), true, d).find((x) => x.type === 'report').passage), [2, 0, 1]);
+});
+
+test('the mock without a voice: the whistle part becomes missing letters', () => {
+  const q = mockOf(seenAll(), false);
+  assert.ok(!q.some((x) => x.type === 'whistle'));
+  assert.equal(q.filter((x) => x.part === 'whistle' && x.type === 'missing').length, 6);
+});
+
+test('from the first mock day the match is the review and the kicks; the name joins the match before that', () => {
+  const cards = seenAll(4);
+  const opts = { words: CC.words, cards, today: '2026-11-22', speech: true, kit: CC.kit, report: CC.report, dinner: CC.dinner, letters: CC.letters, mock: CC.mock, name: true };
+  const d6 = E.buildSession(Object.assign({}, opts, { dayNum: 6, today: '2026-11-21' }));
+  assert.equal(d6.filter((x) => x.type === 'name').length, 1);
+  assert.ok(d6.find((x) => x.type === 'name').set);
+  const d7 = E.buildSession(Object.assign({}, opts, { dayNum: 7 }));
+  assert.ok(d7.length > 0);
+  assert.ok(!d7.some((x) => ['name', 'colour', 'sort', 'where', 'letter', 'dinner', 'report', 'sentence'].includes(x.type)));
+  assert.ok(d7.some((x) => x.type === 'spell'));
+});
+
+test('summarise: right, total and what was missed, by drill or by part', () => {
+  const log = [{ t: 'letter', p: 'letter', k: 'b', ok: false }, { t: 'letter', p: 'letter', k: 'd', ok: true },
+    { t: 'letter', p: 'letter', k: 'b', ok: false }, { t: 'colour', p: 'extra', k: 'grey', ok: true }];
+  assert.deepEqual(E.summarise(log), { letter: { right: 1, total: 3, missed: ['b'] }, colour: { right: 1, total: 1, missed: [] } });
+  assert.deepEqual(Object.keys(E.summarise(log, 'p')), ['letter', 'extra']);
+});
+
+test('the training ground: the craftiest words first, missed sets come back, nothing moves a box', () => {
+  const cards = seenAll();
+  Object.assign(cards.spinach, { misses: 4, tricky: true });
+  cards.cheese.misses = 2; cards.chair.misses = 1;
+  const history = [{ letter: { right: 4, total: 6, missed: ['b', 'q'] }, where: { right: 3, total: 4, missed: ['near'] }, sentence: { right: 4, total: 5, missed: ['kitchen'] } }];
+  const pool = E.trickyPool({ words: CC.words, cards, history });
+  assert.equal(pool.words[0], 'spinach');
+  assert.deepEqual(pool.words.slice(0, 4).sort(), ['chair', 'cheese', 'kitchen', 'spinach']);
+  assert.deepEqual(pool.letters, ['b', 'q']);
+  assert.deepEqual(pool.preps, ['near']);
+  const q = E.buildTraining({ words: CC.words, cards, history, speech: true, kit: CC.kit, dinner: CC.dinner });
+  const intros = q.filter((x) => x.type === 'intro').map((x) => x.wordId);
+  assert.ok(intros.includes('spinach') && intros.includes('cheese') && intros.includes('kitchen'));
+  assert.ok(q.filter((x) => x.type !== 'intro').every((x) => x.set && x.phase === 'train'));
+  assert.deepEqual(q.filter((x) => x.type === 'letter').map((x) => x.letter).sort(), ['b', 'q']);
+  assert.equal(q.filter((x) => x.type === 'where')[0].prep, 'near');
+  for (const id of intros) {
+    assert.ok(q.indexOf(q.find((x) => x.type === 'intro' && x.wordId === id)) < q.indexOf(q.find((x) => x.type !== 'intro' && x.wordId === id)), 'the cue comes before the turn');
+  }
+});
+
+test('the training ground with no misses yet: the lowest climbers step in', () => {
+  const cards = seenAll(5);
+  cards.fruit.level = 3; cards.share.level = 4;
+  const q = E.buildTraining({ words: CC.words, cards, history: [], speech: true, kit: CC.kit, dinner: CC.dinner });
+  const intros = q.filter((x) => x.type === 'intro').map((x) => x.wordId);
+  assert.ok(intros.length >= 3);
+  assert.ok(intros.includes('fruit') && intros.includes('share'));
+});

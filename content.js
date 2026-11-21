@@ -24,6 +24,7 @@ window.CONTENT = {
       dinner: ['הטבח מרוצה!', 'בדיוק מה שחסר!', 'ישר לסיר!', 'המצרך הנכון!', 'ארוחה של אלופים!'],
       letter: ['זוג מושלם!', 'האותיות נפגשו!', 'גדולה וקטנה, יחד!', 'הזוג הושלם!', 'מספר נכון על החולצה!'],
       where: ['הכדור אותר!', 'עין של חלוץ!', 'בדיוק שם!', 'הכדור לא מצליח להתחבא!', 'נמצא!'],
+      name: ['השם על החולצה!', 'חתימה של קפטן!', 'מודפס ומוכן!', 'השם במקום!', 'כל אות במקומה!'],
       spell: ['גוווול!', 'ישר לחיבורים!', 'רשת!', 'פנדל מושלם!', 'השוער אפילו לא זז!', 'בעיטה של קפטן!'],
     },
     sub: [
@@ -160,6 +161,27 @@ window.CONTENT = {
   /* Kit numbers (exercise 6 of the test): the capital and the small letter of every pair, Aa to Zz.
      One set a day from day `from`; after the last set, eight letters a day from the whole alphabet. */
   letters: { from: 5, sets: ['abcdef', 'ghijkl', 'mnopqr', 'stuvwxyz'], mixed: 8 },
+
+  /* The mock match (prd.md §10): the test's eight exercises in the test's order, one sitting, from day `from` to day
+     `until`. A friendly on the first days, the Clásico on day `clasico`. It opens after the day's match, never moves a
+     box and brings no pack. `parts`: the title and the line on the card that opens each exercise; `no` is the number
+     of the exercise on the test paper (none for the name at the top of the page and for extra time). */
+  mock: {
+    from: 7, until: 9, clasico: 9,
+    friendlies: ['Maccabi Milkshake', 'Inter Sandwich'],
+    parts: {
+      name: { title: 'השם בראש הדף', line: 'כמו בכל דף מבחן: קודם כל השם באנגלית.' },
+      whistle: { no: 1, title: 'השריקה', line: 'שומעים מילה, ובוחרים איזה צמד מתחבא בה: ch או sh.' },
+      bank: { no: 2, title: 'מחסן המילים', line: 'תמונה ומילה בעברית. שולפים מהמחסן את המילה באנגלית.' },
+      sort: { no: 3, title: 'מדפי הצבעים', line: 'כל מאכל למדף של הצבע שלו. שניים על כל מדף.' },
+      missing: { no: 4, title: 'האותיות שברחו', line: 'שתי אותיות ברחו מהמילה. מחזירים אותן.' },
+      dinner: { no: 5, title: 'ארוחת הקבוצה', line: 'הטבח רוצה להכין משהו. בוחרים מה הוא צריך.' },
+      letter: { no: 6, title: 'מספרי החולצות', line: 'אות גדולה ואות קטנה מחפשות זו את זו.' },
+      sentence: { no: 7, title: 'המשפט החסר', line: 'מילה ברחה מהמשפט. מחזירים אותה.' },
+      report: { no: 8, title: 'דו״ח המשחק', line: 'קוראים את הכתבה ועונים: כן או לא, ומילה אחת.' },
+      extra: { title: 'תוספת זמן', line: 'צבעים, ואיפה הכדור מתחבא.' },
+    },
+  },
 
   /* The Match report (prd.md §4.6, exercise 8 of the test): short texts of ours, written from the test words.
      Three of them, one a day in turn from day `from`. Each has three yes/no lines and three one-word completions.

@@ -140,7 +140,7 @@ Each word is one card with several faces. The drill chosen depends on its level.
 
 ### 6.3 Test-shaped sets
 
-Not Leitner cards, but queue items: **Kit room** (colour sort), **Team dinner** (ingredients), **Kit numbers** (letter pairs, which are also cards per pair), **Sentence fill**, **Match report**, and the **Name** card (Eitan on the jersey, typed). They enter the day's queue once the words they use are at level 2 or more.
+Not Leitner cards, but queue items: **Kit room** (colour sort), **Team dinner** (ingredients), **Kit numbers** (letter pairs, which are also cards per pair), **Sentence fill**, **Match report**, and the **Name** card (Eitan on the jersey, typed; in the daily match up to day 6, then at the top of every mock). They enter the day's queue once the words they use are at level 2 or more.
 
 ## 7. Game design (Octalysis)
 
@@ -205,6 +205,7 @@ Every answer returns a reaction in under 300 ms: a sound, a card animation, the 
 
 - **The training ground** is free play: any drill on any word, with a tally of "training minutes" and nothing else. It **never moves a box**, grants a pack or changes the streak.
 - **The cap** is set by a parent (§8): minutes or rounds, default 15 minutes a day. When the cap is reached the game ends on a high note ("training over, back tomorrow") and never as a punishment.
+- **Built 21 Nov: the craftiest opponents.** The training ground opens after the day's match. Each round takes the words with the most misses (tricky words first, plus words missed on test-shaped sets) and shows each one's card first (picture, Hebrew, its line) before two turns on test faces. Letter pairs, colours, prepositions, dishes and sort foods missed in matches and mocks come back too. A miss comes back once at the end of the round. Rounds of about 15 items; minutes only, no points, no pack, no box moves.
 
 ## 8. The parent
 
@@ -250,9 +251,9 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | 4 | Thu 19 | the remaining 18 food words (incl. verbs, ice cream, shopping list), letters 4–5 | up to 25 min. New words in the first half, review in the second |
 | 5 | Fri 20 | the ten phrases (moved from day 4 by the owner, 19 Nov), the Kit room opens (colours, colour sort, in / on / under / near), review and the reading passage | |
 | 6 | Sat 21 | none, review. Team dinner opens (built 19 Nov). Kit numbers run from day 5: Aa–Ff, Gg–Ll, Mm–Rr, Ss–Zz, then eight mixed pairs a day | |
-| 7 | Sun 22 | none, review, the first test-shaped mock | |
+| 7 | Sun 22 | none, review, the first test-shaped mock | Built 21 Nov: from day 7 the match is the review and the kicks, and the sets move into the mock. The mock opens after the match: the name at the top of the page, the eight exercises in the test's order (each opened by a numbered card), then extra time (colours, in/on/under/near). Sets only: no box moves, no pack; points yes. The coach screen shows each exercise's score and what was missed |
 | 8 | Mon 23 | none. **Target day: every word at level 5** | second mock |
-| 9 | Tue 24 | none. Buffer and the **Clásico** mock | |
+| 9 | Tue 24 | none. Buffer and the **Clásico** mock | the same mock, against Real Madrid |
 | 10 | Wed 25 | test day: a 5-minute optional warm-up | |
 
 ## 11. Open questions

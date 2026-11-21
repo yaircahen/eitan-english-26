@@ -30,6 +30,7 @@ const shots = process.argv[2];
   for (const d of dinners) assert.ok(!d.need.some((id) => d.not.includes(id)));
   const load = () => page.evaluate(() => JSON.parse(localStorage.getItem('eitan-english-26.save.v1')));
   let sortMiss = false;
+  let letterMiss = false, missedLetter = null;
   const byHe = Object.fromEntries(words.map((w) => [w.he, w]));
 
   // setup: a wrong name first, then the right one
@@ -75,7 +76,8 @@ const shots = process.argv[2];
       if (await page.$('.stage.report')) {
         faces.add('report');
         const sv = await load();
-        const p = passages[sv.session.queue[sv.session.pos].passage];
+        const r = sv.session || sv.mock || sv.train;
+        const p = passages[r.queue[r.pos].passage];
         const qno = await page.textContent('#qno');
         const text = (await page.textContent('#rq')).replace(/\s+/g, ' ').trim();
         const yn = p.yesno.find((x) => x.q === text);
@@ -100,7 +102,11 @@ const shots = process.argv[2];
         await page.waitForFunction((f) => document.getElementById('food').textContent.trim() !== f || document.getElementById('ok'), food);
         continue;
       }
-      if (await page.$('.kit-dinner')) {
+      if (await page.$('.namebox')) {
+        faces.add('name'); await once('name', '43-name');
+        await type('eitan'); assert.equal((await page.textContent('#nb')).trim(), 'Eitan');
+        await page.click('[data-k="ENTER"]');
+      } else if (await page.$('.kit-dinner')) {
         faces.add('dinner'); await once('dinner', '39-dinner');
         const dish = await page.getAttribute('#dsent', 'data-dish');
         const d = dinners.find((x) => x.dish === dish);
@@ -113,6 +119,11 @@ const shots = process.argv[2];
         faces.add('letter');
         const cue = (await page.textContent('#lcue')).trim();
         await once(cue === cue.toUpperCase() ? 'lcap' : 'lsmall', cue === cue.toUpperCase() ? '40-letter-capital' : '41-letter-small');
+        if (letterMiss) { // one wrong pair, to see it come back on the training ground
+          letterMiss = false; missedLetter = cue.toLowerCase();
+          await page.click(`.opt[data-l]:not([data-l="${missedLetter}"])`);
+          await page.waitForSelector('.fb-slip'); await page.click('#fbnext'); continue;
+        }
         await page.click(`.opt[data-l="${cue.toLowerCase()}"]`);
       } else if (await page.$('.kit-colour')) {
         faces.add('colour');
@@ -281,6 +292,78 @@ const shots = process.argv[2];
   const f6 = await playMatch();
   assert.ok(f6.has('dinner') && f6.has('letter'));
   await shot('42-career-day6');
+
+  assert.ok(f6.has('name'), 'his name is typed in the match');
+
+  // day 7: the match is the review and the kicks; then the first mock, the test's exercises in order
+  await page.goto(BASE + '?day=2026-11-22');
+  assert.equal(await page.$('#mock'), null, 'the mock waits for the match');
+  assert.ok(await page.$('#train[disabled]'), 'the training ground waits for the match');
+  await page.click('#go');
+  const q7 = (await load()).session.queue;
+  assert.ok(!q7.some((x) => ['colour', 'sort', 'where', 'letter', 'dinner', 'report', 'sentence', 'name'].includes(x.type)), 'the sets live in the mock now');
+  await playMatch();
+  assert.match(await page.textContent('.match'), /משחק הכנה נגד/);
+  await shot('44-career-mock');
+  st = await load();
+  const cards7 = JSON.stringify(st.cards), points7 = st.points;
+  await page.click('#mock');
+  await page.waitForSelector('.mockpart'); await shot('45-mock-part');
+  const qm = (await load()).mock.queue;
+  assert.deepEqual(qm.filter((x) => x.type === 'mockpart').map((x) => x.part), ['name', 'whistle', 'bank', 'sort', 'missing', 'dinner', 'letter', 'sentence', 'report', 'extra']);
+  letterMiss = true;
+  const fm = await playMatch();
+  for (const f of ['name', 'whistle', 'bank', 'sort', 'missing', 'dinner', 'letter', 'sentence', 'report', 'colour', 'where']) assert.ok(fm.has(f), `the mock has ${f}`);
+  st = await load();
+  assert.equal(JSON.stringify(st.cards), cards7, 'a mock never moves a box');
+  assert.ok(st.points > points7, 'a mock brings points');
+  const m7 = st.mocks['2026-11-22'];
+  assert.ok(m7 && m7.total > 30 && m7.right === m7.total - 1);
+  assert.deepEqual(m7.parts.letter.missed, [missedLetter]);
+  assert.equal(st.mock, null);
+  assert.match(await page.textContent('.match'), /שוחק: \d+ שערים/);
+  assert.equal(Object.keys(st.album).length >= 3, true);
+
+  // the training ground: the missed pair comes back; no box, no points, no pack
+  const album7 = JSON.stringify(st.album), points7b = st.points;
+  await page.click('#train');
+  await page.waitForSelector('.stage'); await shot('46-train-start');
+  const qt = (await load()).train.queue;
+  assert.ok(qt.some((x) => x.type === 'letter' && x.letter === missedLetter), 'the missed pair is trained');
+  assert.ok(qt.filter((x) => x.type !== 'trainstart' && x.type !== 'intro').every((x) => x.set));
+  await playMatch();
+  st = await load();
+  assert.equal(JSON.stringify(st.cards), cards7, 'the training ground never moves a box');
+  assert.equal(st.points, points7b, 'no points on the training ground');
+  assert.equal(JSON.stringify(st.album), album7, 'no pack on the training ground');
+  assert.ok(st.train.rounds === 1 && st.train.total > 0);
+  // the cap: training minutes at the cap close it for the day
+  await page.evaluate(() => { const k = 'eitan-english-26.save.v1'; const v = JSON.parse(localStorage.getItem(k)); v.train.ms = v.settings.capMin * 60000; localStorage.setItem(k, JSON.stringify(v)); });
+  await page.goto(BASE + '?day=2026-11-22');
+  assert.ok(await page.$('#train[disabled]'));
+  assert.match(await page.textContent('#train'), /הסתיים/);
+  await shot('47-career-after-mock');
+
+  // the coach sees the mock, exercise by exercise, and what the training ground works on
+  await longPress();
+  const coachText = await page.textContent('.coach');
+  assert.match(coachText, /משחק הכנה: \d+\/\d+/);
+  assert.match(coachText, /6\. זוגות אותיות/);
+  assert.match(coachText, new RegExp(`${missedLetter.toUpperCase()}${missedLetter}`));
+  await shot('48-coach-mock');
+  await page.click('#back');
+
+  // day 9: the Clásico; day 10: the test, no mock
+  await page.goto(BASE + '?day=2026-11-24');
+  await page.click('#go'); await playMatch();
+  assert.match(await page.textContent('.match'), /הקלאסיקו/);
+  await page.click('#mock');
+  assert.match(await page.textContent('.kicker'), /Real Madrid/);
+  await shot('49-clasico');
+  await playMatch();
+  assert.equal((await load()).mocks['2026-11-24'].kind, 'clasico');
+  await page.goto(BASE + '?day=2026-11-25');
+  assert.equal(await page.$('#mock'), null);
 
   assert.deepEqual(errors, []);
   await browser.close();
