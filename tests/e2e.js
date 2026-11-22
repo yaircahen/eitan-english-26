@@ -438,7 +438,9 @@ const shots = process.argv[2];
   await longPress();
   const coachText = await page.textContent('.coach');
   assert.match(coachText, /משחק הכנה: \d+\/\d+/);
-  assert.match(coachText, /6\. זוגות אותיות/);
+  assert.match(coachText, /6\. אותיות גדולות וקטנות/);
+  assert.match(coachText, /(מעל היעד|מתחת ליעד) \(90%\)/);
+  assert.match(coachText, /הכי כדאי לחזור עליו/);
   assert.match(coachText, new RegExp(`${missedLetter.toUpperCase()}${missedLetter}`));
   await shot('48-coach-mock');
   await page.click('#back');
@@ -454,6 +456,17 @@ const shots = process.argv[2];
   assert.equal((await load()).mocks['2026-11-24'].kind, 'clasico');
   await page.goto(BASE + '?day=2026-11-25');
   assert.equal(await page.$('#mock'), null);
+  // test morning: an eight-word warm-up, no sets, no kicks, no pack
+  assert.match(await page.textContent('.match'), /חימום/);
+  const album10 = JSON.stringify((await load()).album);
+  await page.click('#go');
+  const q10 = (await load()).session.queue;
+  assert.equal(q10.filter((x) => x.type !== 'intro').length, 8);
+  assert.ok(q10.every((x) => x.phase === 'warmup'));
+  await playMatch();
+  assert.equal(JSON.stringify((await load()).album), album10, 'no pack on the test morning');
+  assert.match(await page.textContent('.match'), /בהצלחה/);
+  await shot('65-test-morning');
 
   assert.deepEqual(errors, []);
   await browser.close();

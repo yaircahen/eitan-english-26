@@ -255,8 +255,13 @@
           : `<p>משחק הכנה נגד ${en(rivalOf(t))}: שמונה תרגילים, בדיוק כמו בדף המבחן.</p><button class="btn btn-go glow" id="mock">עולים למשחק ההכנה</button>`;
     } else if (mk) mockHtml = `<p>${mk === 'clasico' ? 'הקלאסיקו' : 'משחק ההכנה'} שוחק: ${state.mocks[t].right} שערים. המגרש נפתח שוב מחר.</p>`;
 
+    const testDay = dayNum(t) >= C.testDay.day;
     let match;
-    if (done) {
+    if (testDay && !done && !s) {
+      match = `<h2>בוקר של משחק גדול</h2><p>חימום קצר, אם בא לך: שמונה מילים, כמה דקות.</p><button class="btn btn-go glow" id="go">חימום</button>`;
+    } else if (testDay && done) {
+      match = `<h2>החימום מאחוריך</h2><p>${en(p.idol)} כבר בחדר ההלבשה. בהצלחה היום!</p>`;
+    } else if (done) {
       match = `<h2>המשחק של היום שוחק</h2>${mockHtml || tomorrow}`;
     } else if (s) {
       match = `<h2>המשחק באמצע</h2><p>המילים מחכות על הדשא.</p><button class="btn btn-go glow" id="go">חוזרים למגרש</button>`;
@@ -395,7 +400,7 @@
         mode: 'match', day: t, log: [],
         queue: E.buildSession({
           words: C.words, foils: C.foils, cards: state.cards, today: t, dayNum: dayNum(t), speech: Voice.ok,
-          kit: C.kit, kitIntro: !state.kitSeen, report: C.report, dinner: C.dinner, letters: C.letters, mock: C.mock, name: true,
+          kit: C.kit, kitIntro: !state.kitSeen, report: C.report, dinner: C.dinner, letters: C.letters, mock: C.mock, name: true, testDay: C.testDay,
         }),
         pos: 0, points: 0, combo: 0, bestCombo: 0, right: 0, total: 0,
         promoted: [], dropped: [], ms: 0,
@@ -661,7 +666,7 @@
     const w = WORD[item.wordId];
     screen(`<section class="play">${hud()}
       <div class="stage intro-card">
-        <p class="kicker">${item.phase === 'train' ? 'יריבה ערמומית. מסתכלים לה טוב בעיניים' : 'יריבה חדשה עולה למגרש'}</p>
+        <p class="kicker">${item.phase === 'train' || item.tricky ? 'יריבה ערמומית. מסתכלים לה טוב בעיניים' : 'יריבה חדשה עולה למגרש'}</p>
         <div class="emoji">${w.emoji}</div>
         <button class="say bigword ${w.phrase ? 'long' : ''}" id="say" dir="ltr" lang="en">${blendHtml(w)} <span>🔊</span></button>
         <p class="he">${esc(w.he)}</p>
@@ -1319,6 +1324,18 @@
     state.session = null;
     run = null;
     save();
+    if (dayNum(s.day) >= C.testDay.day) { // the test morning: a warm-up, no pack
+      Sfx.up();
+      screen(`<section class="play"><div class="stage break">
+        <p class="kicker">סוף החימום</p>
+        <h1>מוכנים לעלות</h1>
+        <div class="score"><div><b>${s.right}</b><span>שערים בחימום</span></div></div>
+        <p class="lead">המילים כבר רועדות בחדר ההלבשה. ${en(state.profile.idol)} מחכה לך במנהרה. בהצלחה!</p>
+        <button class="btn btn-go glow" id="ok">חזרה לקריירה</button>
+      </div></section>`, 'scr-play');
+      on('#ok', () => { Sfx.tap(); career(); });
+      return;
+    }
     const pack = drawPack();
     const st = stageIndex();
     Sfx.up();
@@ -1365,10 +1382,11 @@
 
   const SET_HE = {
     name: 'השם (Eitan)', whistle: '1. השריקה: ch או sh בשמיעה', bank: '2. מחסן המילים', sort: '3. מיון לפי צבע', missing: '4. צמד האותיות החסר',
-    dinner: '5. I want to make… I need…', letter: '6. זוגות אותיות', sentence: '7. השלמת משפט', report: '8. קטע קריאה', extra: 'צבעים ומילות מיקום',
+    dinner: '5. I want to make… I need…', letter: '6. אותיות גדולות וקטנות', sentence: '7. משפטים', report: '8. קריאה', extra: 'צבעים ומילות מיקום',
     bankboard: '2. מחסן המילים (תמונות)', dinnerboard: '5. I want to make… I need…', abc: '6. טבלת האותיות', matchboard: '7. חצאי משפטים', story: '8. סיפור קצר',
     colour: 'מילות צבע', where: 'in / on / under / near', spell: 'כתיבת מילה שלמה (פנדלים)', recognise: 'זיהוי מילה',
   };
+  const MOCK_TARGET = 90; // prd.md §2: the mock score by Tuesday
   const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
   const keyName = (k) => (WORD[k] ? WORD[k].en : /^[a-z]$/.test(k) ? `${k.toUpperCase()}${k}` : k);
   // right / total per drill or per mock part, and what was missed (the reading lines are left out: they have no short name)
@@ -1402,7 +1420,12 @@
     const mockDays = Object.keys(state.mocks).sort();
     const mocksHtml = mockDays.length ? mockDays.map((k) => {
       const m = state.mocks[k];
-      return `<h3><span dir="ltr">${k.slice(5)}</span> · ${m.kind === 'clasico' ? 'הקלאסיקו' : 'משחק הכנה'}: ${m.right}/${m.total} (${pct(m.right, m.total)}%), ${m.minutes} דקות</h3>
+      const p = pct(m.right, m.total);
+      const weak = E.MOCK_PARTS.filter((x) => m.parts[x] && m.parts[x].right < m.parts[x].total)
+        .sort((a, b) => m.parts[a].right / m.parts[a].total - m.parts[b].right / m.parts[b].total)[0];
+      return `<h3><span dir="ltr">${k.slice(5)}</span> · ${m.kind === 'clasico' ? 'הקלאסיקו' : 'משחק הכנה'}: ${m.right}/${m.total} (${p}%), ${m.minutes} דקות ·
+          <span class="${p >= MOCK_TARGET ? 'on-target' : 'under-target'}">${p >= MOCK_TARGET ? `מעל היעד (${MOCK_TARGET}%)` : `מתחת ליעד (${MOCK_TARGET}%)`}</span></h3>
+        ${weak ? `<p>הכי כדאי לחזור עליו בעל פה: <b>${SET_HE[weak] || weak}</b> (${m.parts[weak].right}/${m.parts[weak].total}).</p>` : '<p>כל התרגילים בלי טעויות.</p>'}
         ${setsTable(m.parts, '', E.MOCK_PARTS)}`;
     }).join('') : `<p>${isMega(t) ? `היום יום מגה: אחרי המשחק של היום נפתחים משחק ידידות בונוס בנוסח המבחן ומגרש אימונים עד ${trainCap(t)} דקות. הכול לפי רצונו, בלי חובה.` : mockKind(t) || dayNum(t) < C.mock.from ? 'משחק ההכנה הראשון נפתח ביום ראשון 22.11, אחרי המשחק של היום.' : 'לא שוחקו משחקי הכנה.'}</p>`;
     const pool = E.trickyPool({ words: C.words, cards: state.cards, history: pastSets() });

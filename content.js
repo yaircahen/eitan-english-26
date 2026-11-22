@@ -4,6 +4,7 @@
 window.CONTENT = {
   startDate: '2026-11-16', // day 1
   testDate: '2026-11-25',
+  testDay: { day: 10, words: 8 }, // the test morning: an optional warm-up of eight words, no sets, no kicks, no pack
   playerName: 'Eitan', // a name: capital first letter, always
 
   /* What the stadium says after an answer. {w} is the word. Picked so the same line never comes twice in a row.

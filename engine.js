@@ -137,11 +137,23 @@
 
   /* The day's queue: warm-up, first half (new words), half-time, second half, shoot-out.
      Items marked `set` (Sentence fill, the shoot-out) never move a box. */
-  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, dinner = null, letters = null, mock = null, name = false, rng = Math.random }) {
+  function buildSession({ words, foils = [], cards, today, dayNum, speech, kit = null, kitIntro = false, report = null, dinner = null, letters = null, mock = null, name = false, testDay = null, rng = Math.random }) {
+    // A tricky word (prd.md §6.1) shows its card, the picture and its line, before its first turn of the day.
+    const warmTurn = (w) => {
+      const c = cards[w.id];
+      const t = { type: c.level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' };
+      return c.tricky ? [{ type: 'intro', wordId: w.id, phase: 'warmup', tricky: true }, t] : [t];
+    };
+    // Test day (prd.md §10): a short warm-up. A few words, the craftiest first; no sets, no kicks.
+    if (testDay && dayNum >= testDay.day) {
+      const seen = shuffle(words.filter((w) => cards[w.id] && cards[w.id].seen), rng)
+        .sort((a, b) => (cards[b.id].tricky - cards[a.id].tricky) || (cards[b.id].misses - cards[a.id].misses));
+      return seen.slice(0, testDay.words).flatMap(warmTurn);
+    }
     // From the first mock day on, the test-shaped sets live in the mock: the match is the review and the kicks.
     if (mock && dayNum >= mock.from) { kit = null; report = null; dinner = null; letters = null; name = false; }
-    const warm = dueWords(words, cards, today, rng).map((w) => (
-      { type: cards[w.id].level >= 3 ? squadFace(w, speech, rng) : 'recognise', wordId: w.id, phase: 'warmup' }));
+    const warm = dueWords(words, cards, today, rng).flatMap(warmTurn);
+    const warmWords = warm.filter((x) => x.type !== 'intro').map((x) => words.find((w) => w.id === x.wordId));
 
     const fresh = words.filter((w) => !(cards[w.id] && cards[w.id].seen) && w.day <= dayNum);
     // Sentence fill (a test-shaped set, never moves a box): words already in the squad, in a sentence.
@@ -170,12 +182,12 @@
     }
     if (!fresh.length) {
       if (!warm.length) return [];
-      const kickers = shuffle(warm.map((x) => words.find((w) => w.id === x.wordId)).filter(kickable), rng).slice(0, KICKS);
+      const kickers = shuffle(warmWords.filter(kickable), rng).slice(0, KICKS);
       return warm.concat(room, sentences, kickers.length ? [{ type: 'shootout' }] : [],
         kickers.map((w) => ({ type: 'spell', wordId: w.id, set: true, phase: 'shootout' })));
     }
     // A long review would push the new words too late in the evening: they go first, and the review follows half-time.
-    const late = warm.length > LATE_REVIEW;
+    const late = warmWords.length > LATE_REVIEW;
     const q = late ? [] : warm.slice();
 
     // sh words by ear only are needed while no sh word is on the pitch; after that the whistle has both sides
@@ -202,7 +214,7 @@
     // every match ends with typed kicks: when the new entries cannot be typed (phrases), squad words step up
     const kickers = shuffle(fresh.filter(kickable), rng);
     if (kickers.length < KICKS) {
-      const squad = shuffle(warm.map((x) => words.find((w) => w.id === x.wordId)).filter(kickable), rng);
+      const squad = shuffle(warmWords.filter(kickable), rng);
       kickers.push(...squad.slice(0, KICKS - kickers.length));
     }
     if (kickers.length) q.push({ type: 'shootout' });

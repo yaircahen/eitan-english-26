@@ -437,3 +437,5 @@ table.abc .wgap.bad { color: var(--garnet); font-size: .8em; }
   table.abc { font-size: 1.25rem; }
   .match2 { grid-template-columns: 1fr; }
 }
+.coach .on-target { color: #2fbf71; }
+.coach .under-target { color: var(--gold); }
