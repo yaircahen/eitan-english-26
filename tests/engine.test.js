@@ -403,3 +403,25 @@ test('the training ground with no misses yet: the lowest climbers step in', () =
   assert.ok(intros.length >= 3);
   assert.ok(intros.includes('fruit') && intros.includes('share'));
 });
+
+test('a tricky word shows its card before its first turn in the match; the intro moves nothing', () => {
+  const cards = seenAll(4);
+  Object.assign(cards.spinach, { level: 4, l4Day: D1, misses: 4, tricky: true });
+  const q = E.buildSession({ words: CC.words, cards, today: '2026-11-22', dayNum: 7, speech: true, mock: CC.mock });
+  const i = q.findIndex((x) => x.type === 'intro' && x.wordId === 'spinach');
+  assert.ok(i >= 0 && q[i].tricky);
+  assert.equal(q[i + 1].wordId, 'spinach');
+  assert.equal(q.filter((x) => x.type === 'intro').length, 1, 'only the tricky word');
+  assert.ok(!q.some((x) => x.type === 'spell' && q.filter((y) => y.type === 'spell' && y.wordId === x.wordId).length > 1), 'no word kicks twice');
+});
+
+test('the test morning: eight words, the craftiest first, no sets and no kicks', () => {
+  const cards = seenAll(5);
+  Object.assign(cards.spinach, { misses: 4, tricky: true });
+  cards.cheese.misses = 2;
+  const q = E.buildSession({ words: CC.words, cards, today: '2026-11-25', dayNum: 10, speech: true, kit: CC.kit, letters: CC.letters, dinner: CC.dinner, report: CC.report, mock: CC.mock, name: true, testDay: CC.testDay });
+  const turns = q.filter((x) => x.type !== 'intro');
+  assert.equal(turns.length, 8);
+  assert.deepEqual(q.slice(0, 3).map((x) => x.wordId), ['spinach', 'spinach', 'cheese']);
+  assert.ok(q.every((x) => x.phase === 'warmup' && x.type !== 'spell'));
+});

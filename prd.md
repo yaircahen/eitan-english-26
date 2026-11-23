@@ -49,7 +49,7 @@ Eight exercises:
 |---|---|---|
 | 1 | Hear a word, write the blend (`sh` / `ch`). E.g. she says *brush*, he writes `sh` | **Whistle** |
 | 2 | Match a sentence or picture to a word from a word bank; write it next to the picture | **Word bank** |
-| 3 | Sort foods into colour columns (yellow / brown / red on the sample). Two foods per column | **Kit room** (colour sort) |
+| 3 | Sort foods into colour columns (yellow / brown / red on the sample). Two foods per column | **Kit room** (colour sort): a bank of six words, placed in any order, two per column |
 | 4 | Complete the missing blend under a picture, e.g. `fi__ __` | **Missing letters** |
 | 5 | "I want to make a pizza. I need ___" (an ingredient from the word bank) | **Team dinner** |
 | 6 | Complete the ABC letter pairs (capital + small) | **Kit numbers** |
@@ -121,7 +121,7 @@ Session-based, not calendar-based. Five levels:
 - **Demotion:** a miss drops the word one level, never below 3 once it reached 3. Failed words reappear at the end of the same sitting with no box change on the retry.
 - **Level 5 words** are spot-checked: about one in four appears in each sitting, and a miss drops it to level 4.
 - **Review order:** highest due level first, down to level 1, shuffled within a level.
-- **Leech rule:** four misses on a word makes it a "tricky" word, which gets a picture cue, a Hebrew memory line, and a mention on the parent screen.
+- **Leech rule:** four misses on a word makes it a "tricky" word, which gets a picture cue, a Hebrew memory line, and a mention on the parent screen. Built 22 Nov: the word's card (its emoji, the Hebrew and its line) opens its first turn of each match, and every round of the training ground.
 - **Strict marking:** spellings are exact. A wrong letter is shown in place so a miss teaches.
 - **Spelling is for the shoot-out only (decided 17 Nov).** The test asks the children to read, translate, pick a word from a bank and fill in a missing blend, never to write a whole word from memory. So levels climb only on those faces. Full spelling is the penalty shoot-out at the end of every match: points and combo, no box move.
 - **A long review waits (built 19 Nov).** On a day with new words and more than 20 words due, the new words open the match and the review follows half-time. Entries that are not one plain word (*ice cream*, *don't like*, *shopping list*) are read and picked, never typed whole in the shoot-out.
@@ -205,7 +205,7 @@ Every answer returns a reaction in under 300 ms: a sound, a card animation, the 
 
 ### 7.7 The daily session is capped; the training ground is not
 
-- **The training ground** is free play: any drill on any word, with a tally of "training minutes" and nothing else. It **never moves a box**, grants a pack or changes the streak.
+- **The training ground** is free play with a tally of "training minutes" and nothing else. It **never moves a box** or grants a pack. Changed 21 Nov: rather than any drill on any word, each round picks the craftiest opponents (below), which serves the last days before the test better.
 - **The cap** is set by a parent (§8): minutes or rounds, default 15 minutes a day. When the cap is reached the game ends on a high note ("training over, back tomorrow") and never as a punishment.
 - **Built 21 Nov: the craftiest opponents.** The training ground opens after the day's match. Each round takes the words with the most misses (tricky words first, plus words missed on test-shaped sets) and shows each one's card first (picture, Hebrew, its line) before two turns on test faces. Letter pairs, colours, prepositions, dishes and sort foods missed in matches and mocks come back too. A miss comes back once at the end of the round. Rounds of about 15 items; minutes only, no points, no pack, no box moves.
 
@@ -256,7 +256,7 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | 7 | Sun 22 | none, review, the first test-shaped mock | Built 21 Nov, reshaped the same day after the practice page (§4.1): the mock is the paper. Blends heard are written; the picture bank, the dinner lines and the alphabet table are boards of gaps written one after another; the starts are matched to words; the story answers are written, one try per gap, a wrong word crossed out and the right one written beside it. Three stories of ours, one per mock day. Owner review of the stories is pending. from day 7 the match is the review and the kicks, and the sets move into the mock. The mock opens after the match: the name at the top of the page, the eight exercises in the test's order (each opened by a numbered card), then extra time (colours, in/on/under/near). Sets only: no box moves, no pack; points yes. The coach screen shows each exercise's score and what was missed |
 | 8 | Mon 23 | none. **Target day: every word at level 5** | second mock |
 | 9 | Tue 24 | none. Buffer and the **Clásico** mock | the same mock, against Real Madrid |
-| 10 | Wed 25 | test day: a 5-minute optional warm-up | |
+| 10 | Wed 25 | test day: a 5-minute optional warm-up | Built 22 Nov: eight words, tricky and most-missed first (a tricky word with its card); no sets, no shoot-out, no pack, no mock |
 
 ## 11. Open questions
 
@@ -279,7 +279,19 @@ Day 1 is Monday 16 Nov. Words introduced per day follow §6.1.
 | Real names or club marks cause a problem | Names as text only; no crest, no photos; the owner decides what to publish |
 | Two games on one iPad get mixed up | Different icon, name and colours; separate origin |
 
-## 13. Build plan
+## 13. Status (22 Nov)
+
+Built: everything in §4 and §6.3, the Leitner engine (§6.1), the session loop with packs, album and table (§7.4–7.5), the parent screen with PIN, cap, export and import, reset today and per-exercise reports with the 90% mock target (§8), the mock and the Clásico, the training ground, the mega Saturday and the test-day warm-up (§10).
+
+Dropped, by choice, to keep the last days on the test:
+- **Position choice** (§7.2) and the **starting eleven** (§7.2, §7.5).
+- **The golden ball** (§7.5).
+- **The streak and the streak freeze** (§7.4, §8). No streak is shown at all, which also keeps the no-loss rule simple.
+- **The Translate face** (§6.2): the Word bank already goes from picture and Hebrew to English, and the test asks the other way.
+- **The brag card** (§8). Could come back after the test.
+- **Checking the §6.1 simulation against the engine** (§13, M5).
+
+## 14. Build plan
 
 Order each milestone test-facing first.
 
